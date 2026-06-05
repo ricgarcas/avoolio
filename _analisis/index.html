@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvoOlio · Análisis de requerimientos</title>
+<link rel="stylesheet" href="assets/avoolio.css">
+</head>
+<body>
+<header class="topbar">
+ <a class="brand" href="index.html"><img src="assets/gota-avoolio.png" alt="AvoOlio"><span class="wm">Avo<b>Olio</b></span></a>
+ <nav>
+  <a href="index.html">Resumen</a>
+  <a href="demo.html">Demo</a>
+  <!-- Ocultas para el demo enfocado · páginas intactas y recuperables:
+  <a href="modelo.html">Modelo y flujo</a>
+  <a href="plan.html">Gaps y plan</a>
+  -->
+ </nav>
+</header>
+
+<div class="wrap">
+ <section class="hero">
+  <div class="kicker">Demo enfocado · Catálogos generales de acopio</div>
+  <h1>AvoOlio, empezando por la base</h1>
+  <p>Una demo enfocada del primer entregable aterrizable: los <strong>catálogos generales de acopio</strong> —huertas, productores, acopiadores, cuadrillas y acarreo— y un alta de corte que se <strong>autollena desde ellos</strong>. La base maestra sobre la que se construye todo lo demás.</p>
+ </section>
+
+ <p class="lead">Antes de la contabilidad, los pagos y el costeo, el sistema necesita una base de datos maestra limpia y conectada. Eso es lo que montamos esta semana —y lo que puedes explorar en la demo.</p>
+
+ <div class="grid c3" style="margin-top:26px">
+  <div class="card">
+   <span class="pill info">Catálogos</span>
+   <h3 style="margin-top:10px">Base maestra de acopio</h3>
+   <p>Huertas, productores, acopiadores, cuadrillas y proveedores de acarreo —con sus tarifas, RFC y zonas— en una sola fuente confiable.</p>
+  </div>
+  <div class="card">
+   <span class="pill ok">Autollenado</span>
+   <h3 style="margin-top:10px">El catálogo alimenta la captura</h3>
+   <p>Al <strong>programar un corte</strong> eliges la huerta y el punto de reunión, la báscula, el productor y la altura se llenan solos. Siempre editable.</p>
+  </div>
+  <div class="card">
+   <span class="pill danger">Candado</span>
+   <h3 style="margin-top:10px">Alerta de altura integrada</h3>
+   <p>Una huerta por debajo de 2100 msnm dispara sola la alerta de plaga (barrenador) antes de operar. Lo que más le importa a Rodrigo.</p>
+  </div>
+ </div>
+
+ <div class="callout ok" style="margin-top:18px">
+  <strong>Empezamos por aquí.</strong> La base maestra de catálogos es el cimiento del sistema; el resto se construye sobre ella, paso a paso.
+ </div>
+
+ <p style="margin-top:24px"><a class="btn olive" href="app.html" target="_blank" rel="noopener">Abrir la demo a pantalla completa ↗</a></p>
+
+ <!-- Capa de captura · oculta en el demo enfocado (alto nivel, sin entrar al detalle). Recuperable:
+ <span class="anchor" id="captura"></span>
+ <h2>La capa de captura, en una frase</h2>
+ <p class="lead">Cada mensaje entra por un <strong>webhook de WhatsApp (Evolution API)</strong>, pasa por un <strong>router determinista</strong> que decide qué hacer sin gastar LLM, y se procesa dentro de una <strong>sesión con estado</strong> (una máquina de estados por tipo de flujo). El LLM solo entra para entender lenguaje natural ambiguo. Es una arquitectura <strong>determinista-primero</strong>: barata y predecible.</p>
+
+ <div class="grid c4" style="margin:20px 0">
+  <div class="card"><h3>Evolution API</h3><p class="muted" style="font-size:.9rem">Capa de WhatsApp. Recibe y envía mensajes vía webhook.</p></div>
+  <div class="card"><h3>Router determinista</h3><p class="muted" style="font-size:.9rem">regex / lookup en DB. Decide intención sin gastar LLM.</p></div>
+  <div class="card"><h3>Sesión + estado</h3><p class="muted" style="font-size:.9rem"><code>estado_actual</code> + <code>contexto</code> JSONB. Cada transición se registra.</p></div>
+  <div class="card"><h3>LLM puntual</h3><p class="muted" style="font-size:.9rem">Solo para NL ambiguo: normalizar nombres, extraer números, clasificar intención.</p></div>
+ </div>
+
+ <p>Cada tipo de interacción es una máquina de estados independiente. Da clic para expandir. <span class="state start">verde</span> = inicio · <span class="state">normal</span> · <span class="state final">dorado</span> = final · <span class="state llm">LLM</span> = usa modelo · <span class="state hitl">HITL</span> = requiere aprobación humana.</p>
+
+ <div id="machines"></div>
+
+ <div class="callout ok">
+  <strong>Lo que está bien resuelto.</strong> Determinista-primero (barato y predecible) · alertas de plaga por altura ya consideradas (lo que más le importa a Rodrigo) · sobrecompra controlada vía <code>necesidad_compra</code> · negociación con aprobación humana (HITL) cuando el precio sale del margen · acuerdo firmado por WhatsApp con PDF.
+ </div>
+ <div class="callout danger">
+  <strong>Dónde se queda corto.</strong> La captura "comitea" un <code>corte</code> y ahí termina. No hay derivación de cuentas por pagar, ni factura como candado, ni pago, ni conciliación, ni prorrateo, ni costeo por kilo, ni saldos de clientes. <strong>Toda la mitad contable del negocio</strong> — ver <a href="modelo.html">Modelo &amp; flujo</a> y <a href="plan.html">Gaps &amp; plan</a>.
+ </div>
+ -->
+</div>
+
+<footer class="foot">
+ <img class="mark" src="assets/gota-avoolio.png" alt="AvoOlio"><br>
+ AvoOlio
+</footer>
+
+<script src="assets/avoolio.js"></script>
+<script>
+const MACHINES = [
+ { name: "FlujoOnboardingHuerta", tag:"Entrada", desc:"Resuelve a qué huerta se refiere el acopiador y evalúa alertas antes de dejar operar.",
+   states:[["BuscarHuertaPorHUE",""],["HuertaEncontrada",""],["HuertaNoEncontrada",""],["EsperandoNombre",""],["BusquedaFuzzy","llm"],["MostrarCandidatos",""],["NoHayCandidatos",""],["EsperandoSeleccion",""],["EvaluarAlertas",""],["MostrarAlertas",""],["EsperandoAceptacionRiesgo","hitl"],["RegistrarRiesgoAceptado",""],["FinCancelado","final"],["FinOnboarding","final"]],
+   note:"Aquí vive la regla de Rodrigo: huerta con altura &lt; 2100 dispara <code>huerta_alerta</code> (gusano barrenador) y obliga a aceptar el riesgo explícitamente. El LLM normaliza el nombre antes del pg_trgm." },
+ { name:"FlujoRegistroVisita", tag:"Visita", desc:"El acopiador reporta lo que vio en campo: volumen, calibres, calidad y fotos.",
+   states:[["CrearOpsVisita","start"],["EsperandoVolumen",""],["ValidarVolumen",""],["EsperandoCalibres",""],["ValidarDistribucion",""],["EsperandoCalidad",""],["ValidarCalidad",""],["EsperandoFotos",""],["RecibirFoto",""],["ConfirmarCierre",""],["CerrarVisita",""],["FinVisita","final"]],
+   note:"<code>ValidarDistribucion</code> exige que los calibres sumen 100%. Las fotos se suben a R2 (Cloudflare). El número se extrae con LLM si viene coloquial." },
+ { name:"FlujoNegociacion", tag:"Negociación", desc:"Calcula precio, propone, negocia con el productor y cierra un acuerdo firmado.",
+   states:[["CrearOpsNegociacion","start"],["RecolectarParametros",""],["PedirVolumen",""],["PedirCalibres",""],["PedirCalidad",""],["CalcularPrecio",""],["EvaluarMargen",""],["ProponerPrecio",""],["SolicitarHITL","hitl"],["EsperandoAprobacionHumana","hitl"],["RechazoHITL",""],["EsperandoRespuestaProductor",""],["EvaluarRespuesta","llm"],["ContraOferta",""],["Rechazada",""],["Acordada",""],["PausarNegociacion",""],["TimeoutVencida",""],["VerificarSobrecompra",""],["AdvertirSobrecompra",""],["EsperandoConfirmacionSobrecompra","hitl"],["GenerarAcuerdo",""],["EnviarPDFProductor",""],["EsperandoFirmaWA",""],["AcuerdoConfirmado",""],["ActualizarNecesidad",""],["FinNegociacionExitosa","final"],["FinRechazada","final"]],
+   note:"Motor de pricing + <code>EvaluarMargen</code>: si el precio sale del margen, escala a aprobación humana (HITL). <code>VerificarSobrecompra</code> consulta <code>agent.necesidad_compra</code>. El acuerdo se firma por WhatsApp y genera PDF. <strong>El precio pactado que sale de aquí es el insumo #1 de la capa contable.</strong>" },
+ { name:"FlujoSeguimientoCorte", tag:"Corte", desc:"Del acuerdo nace el corte: se asigna cuadrilla, se recibe evidencia y se cierra con volumen cortado.",
+   states:[["ValidarAcuerdo","start"],["EsperandoCuadrilla",""],["FuzzySearchCuadrilla","llm"],["CrearCorte",""],["RecibiendoEvidencia",""],["RecibirComentario",""],["RecibirFotoCorte",""],["ConfirmarCierreCorte",""],["EsperandoVolumenCortado",""],["CerrarCorte",""],["FinCorte","final"]],
+   note:"<strong>Este es el nodo bisagra.</strong> Al cerrar el corte (<code>volumen_comprado_kg</code>, cuadrilla, empresa de corte) queda todo lo necesario para disparar las cuentas por pagar. Hoy el diseño se detiene aquí." },
+ { name:"FlujoCodigoAcceso / Coyote", tag:"Coyote", desc:"Acceso temporal limitado para terceros sin alta formal; precio requiere aprobación de supervisor.",
+   states:[["ValidarCodigo","start"],["CodigoInvalido",""],["ActivarAccesoTemporal",""],["FinSinAcceso","final"],["CrearAcopioCoyote",""],["PedirDatosHuertaCoyote",""],["CalcularPrecioCoyote",""],["SolicitarAprobacionSupervisor","hitl"],["RechazoPrecioCoyote",""],["EnviarPrecioCoyote",""]],
+   note:"Valida contra <code>core.codigo_acceso_temporal</code> (vigente / expirado / usado / revocado). Es el único flujo donde el LLM orquesta libremente con tools mínimos. Calculadora limitada." },
+];
+const cont = document.getElementById('machines');
+if (cont) {
+cont.innerHTML = MACHINES.map(m => `<div class="acc">
+  <div class="acc-head">
+   <span class="pill info">${m.tag}</span>
+   <span class="name">${m.name}</span>
+   <span class="chev">▸</span>
+  </div>
+  <div class="acc-body">
+   <p>${m.desc}</p>
+   <div class="states">${m.states.map(s => `<span class="state ${s[1]}">${s[0]}</span>`).join('')}</div>
+   ${m.note ? `<div class="callout">${m.note}</div>` : ''}
+  </div>
+ </div>`).join('');
+document.querySelectorAll('.acc-head').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
+document.querySelector('.acc')?.classList.add('open');
+}
+</script>
+</body>
+</html>

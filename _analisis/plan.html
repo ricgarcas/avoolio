@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvoOlio · Gaps &amp; plan</title>
+<link rel="stylesheet" href="assets/avoolio.css">
+</head>
+<body>
+<header class="topbar">
+ <a class="brand" href="index.html"><img src="assets/gota-avoolio.png" alt="AvoOlio"><span class="wm">Avo<b>Olio</b></span></a>
+ <nav>
+  <a href="index.html">Resumen</a>
+  <a href="demo.html">Demo</a>
+  <!-- Ocultas para el demo enfocado · páginas intactas y recuperables:
+  <a href="modelo.html">Modelo y flujo</a>
+  <a href="plan.html">Gaps y plan</a>
+  -->
+ </nav>
+</header>
+
+<div class="wrap wide">
+ <section class="hero">
+  <div class="kicker">Alcance &amp; cómo avanzamos</div>
+  <h1>Gaps &amp; plan de ataque</h1>
+  <p>Qué está cubierto hoy, qué falta, y las decisiones técnicas que conviene cerrar antes de avanzar. El resumen de hacia dónde apunta el desarrollo, listo para priorizar con José y el equipo.</p>
+ </section>
+
+ <h2>Cobertura: qué hay vs. qué necesita el negocio</h2>
+ <table class="tbl">
+  <thead><tr><th>Capacidad</th><th>Estado actual del diseño</th><th>Necesidad del negocio</th><th>Estado</th></tr></thead>
+  <tbody>
+   <tr><td>Captura de visita/negociación/corte por WhatsApp</td><td>State machines</td><td>Sí</td><td><span class="pill ok">Cubierto</span></td></tr>
+   <tr><td>Alertas de altura / plaga</td><td>huerta_alerta + aceptación de riesgo</td><td>Crítico (Rodrigo)</td><td><span class="pill ok">Cubierto</span></td></tr>
+   <tr><td>Motor de pricing + margen + HITL</td><td>CalcularPrecio / EvaluarMargen</td><td>Sí</td><td><span class="pill ok">Cubierto</span></td></tr>
+   <tr><td>Control de sobrecompra</td><td>agent.necesidad_compra</td><td>Sí</td><td><span class="pill ok">Cubierto</span></td></tr>
+   <tr><td>Acuerdo firmado + PDF</td><td>EnviarPDFProductor</td><td>Sí</td><td><span class="pill ok">Cubierto</span></td></tr>
+   <tr><td>Pre-llenado por histórico de huerta (punto de reunión, municipio, altura)</td><td>parcial (onboarding)</td><td>Sí (menor fricción)</td><td><span class="pill warn">Parcial</span></td></tr>
+   <tr><td><strong>Derivación de cuentas por pagar</strong></td><td>—</td><td>Crítico (José)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Factura como candado de pago</strong></td><td>—</td><td>Crítico (José)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Ajustes (merma, desvío, salida en falso)</strong></td><td>—</td><td>Crítico</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Pago + conciliación bancaria</strong></td><td>—</td><td>Crítico (Dani)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Excepciones de pago trazadas</strong></td><td>—</td><td>Sí (José)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Prorrateo de indirectos</strong></td><td>—</td><td>Sí (seguro Sura)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Costeo por kilo + curva de calibre</strong></td><td>—</td><td>Crítico (José)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Cuentas por cobrar / saldos clientes</strong></td><td>—</td><td>Sí (Nacional)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Roles + vistas por departamento (RLS)</strong></td><td>—</td><td>Crítico (José)</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td><strong>Reportes Excel/PDF a la medida</strong></td><td>—</td><td>Sí</td><td><span class="pill danger">Falta</span></td></tr>
+   <tr><td>Línea de tiempo / filtro por semana como protagonista (UI)</td><td>—</td><td>Sí (José)</td><td><span class="pill danger">Falta</span></td></tr>
+  </tbody>
+ </table>
+
+ <div class="callout ok" style="margin-top:18px">
+  <strong>Resumen honesto.</strong> La <em>mitad de entrada</em> (captura conversacional) está muy bien resuelta. La <em>mitad contable-financiera</em> —que es el centro de gravedad del negocio según José y Dani— está sin tocar. No es un defecto: es el límite natural de un diseño centrado en el agente de captura. Es justo donde concentra el siguiente esfuerzo.
+ </div>
+
+ <h2>Decisiones técnicas abiertas</h2>
+ <div class="grid c2">
+  <div class="card"><span class="pill info">Datos</span><h3 style="margin-top:8px">¿CxP única o por tipo?</h3><p><strong>Propuesta:</strong> tabla única <code>cuenta_por_pagar</code> + enum <code>tipo</code>. Comparten ciclo de vida y reportes. Cuatro tablas multiplican el código sin ganancia.</p></div>
+  <div class="card"><span class="pill info">Datos</span><h3 style="margin-top:8px">¿Schema único o separado?</h3><p>La base ya usa <code>core</code> y <code>agent</code>. Sugerencia: añadir <code>fin</code> (o <code>contable</code>) para CxP, factura, pago, gasto. Mantiene límites claros entre captura y contabilidad.</p></div>
+  <div class="card"><span class="pill warn">Integración</span><h3 style="margin-top:8px">¿Cómo dispara el corte la CxP?</h3><p>Opciones: trigger en Postgres al pasar corte a <code>completado</code>, o Edge Function. Trigger = atómico y difícil de saltarse (refuerza el candado). Recomendado.</p></div>
+  <div class="card"><span class="pill warn">Integración</span><h3 style="margin-top:8px">Storage: ¿R2 o Synology?</h3><p>La captura ya usa R2. Synology es el respaldo actual de tesorería. Decidir: ¿todo a R2 y Synology se jubila, o sync? José ya dijo querer "una sola app".</p></div>
+  <div class="card"><span class="pill warn">Integración</span><h3 style="margin-top:8px">CFDI: ¿validación contra SAT?</h3><p>¿Solo capturamos el CFDI o validamos vigencia contra el SAT? Empezar con captura + validación de campos; SAT como fase 2.</p></div>
+  <div class="card"><span class="pill danger">Producto</span><h3 style="margin-top:8px">Conciliación bancaria: ¿manual o API?</h3><p>Fase 1: subir estado de cuenta y match sugerido por monto/fecha. Fase 2: API bancaria (Santander). Empezar manual asistido.</p></div>
+ </div>
+
+ <h2>Propuesta de orden de ataque</h2>
+ <div class="pipeline">
+  <div class="stage ricardo"><h4>F1 · Esquema contable</h4><small>CxP, ajuste, factura, pago, excepción. Derivación corte→CxP por trigger. El cimiento.</small></div>
+  <div class="stage ricardo"><h4>F2 · Tesorería</h4><small>Flujo de pago + conciliación asistida + respaldo. Reemplaza lo de Dani en Monday/Synology.</small></div>
+  <div class="stage ricardo"><h4>F3 · Reportes &amp; costeo</h4><small>Costo por kilo, acumulados, saldos, prorrateo. Exports Excel/PDF.</small></div>
+  <div class="stage agencia"><h4>F4 · UI por semana</h4><small>Línea de tiempo + tableros por departamento + RLS. La cara que dibuja José.</small></div>
+ </div>
+
+ <div class="callout">
+  <strong>Reparto natural del trabajo.</strong> Las fases F1–F3 son modelado y lógica de negocio (donde conviene marcar el rumbo del esquema). La F4 y el pulido de la captura conversacional avanzan bien en paralelo con un perfil más de front/integración. El esquema de la página <a href="modelo.html">Modelo &amp; flujo</a> es el contrato entre ambas mitades: si las tablas y los candados están bien, encajan sin fricción.
+ </div>
+
+ <h2>Lo que necesitamos para arrancar</h2>
+ <ul class="clean">
+  <li>Acceso de lectura a la base en Supabase (schemas <code>core</code> y <code>agent</code>) para confirmar nombres y tipos reales.</li>
+  <li>El <code>v_acopistas_autorizados</code> y la definición exacta de la entidad <code>corte</code> que se comitea (campos finales).</li>
+  <li>Catálogos ya listos (Rob): proveedores de acarreo y empresas de corte con su tarifa $/kg y $/día.</li>
+  <li>Confirmar con José la lista de categorías de gasto y qué indirectos se prorratean (y a cuántos meses).</li>
+  <li>Definir el % y la base de la comisión de acopio.</li>
+ </ul>
+</div>
+
+<footer class="foot">
+ <img class="mark" src="assets/gota-avoolio.png" alt="AvoOlio"><br>
+ AvoOlio
+</footer>
+<script src="assets/avoolio.js"></script>
+</body>
+</html>

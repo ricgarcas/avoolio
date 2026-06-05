@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvoOlio · Modelo de datos &amp; flujo</title>
+<link rel="stylesheet" href="assets/avoolio.css">
+</head>
+<body>
+<header class="topbar">
+ <a class="brand" href="index.html"><img src="assets/gota-avoolio.png" alt="AvoOlio"><span class="wm">Avo<b>Olio</b></span></a>
+ <nav>
+  <a href="index.html">Resumen</a>
+  <a href="demo.html">Demo</a>
+  <!-- Ocultas para el demo enfocado · páginas intactas y recuperables:
+  <a href="modelo.html">Modelo y flujo</a>
+  <a href="plan.html">Gaps y plan</a>
+  -->
+ </nav>
+</header>
+
+<div class="wrap wide">
+ <section class="hero">
+  <div class="kicker">El entregable técnico · de la huerta al pago</div>
+  <h1>Modelo de datos &amp; flujo end-to-end</h1>
+  <p>La captura "comitea" un <code>corte</code> y se detiene. Aquí empieza lo que sostiene el negocio: cómo ese corte se convierte en obligaciones de pago trazables —con factura obligatoria, ajustes autorizados y conciliación bancaria— y cómo la información viaja de la huerta al pago sin tener que regresar. Este es el esquema propuesto para Supabase.</p>
+ </section>
+
+ <div class="callout">
+  <span class="quote">"Del corte se deriva TODO. Si no hay corte programado en el sistema, no puede haber pago."</span><br>
+  <strong>— José.</strong> Esta frase es literalmente el modelo de datos: la cuenta por pagar <em>directa</em> no existe sin un <code>corte_id</code>. Es un candado de integridad referencial, no una validación de UI.
+ </div>
+
+ <h2>La derivación: de 1 corte a N obligaciones</h2>
+ <p class="lead">Cuando un corte se cierra, el sistema genera automáticamente las cuentas por pagar que ese corte implica. Cada una nace en estado borrador y avanza por su ciclo de vida hasta quedar respaldada.</p>
+
+ <div class="pipeline" style="margin-top:24px">
+  <div class="stage agencia"><h4>corte (cerrado)</h4><small>volumen, calibres, precio pactado, cuadrilla, empresa de corte, acarreo.</small></div>
+  <div class="stage ricardo"><h4>deriva CxP</h4><small>productor · servicio de corte/cuadrilla · acarreo/flete · comisión de acopio</small></div>
+  <div class="stage ricardo"><h4>ajustes</h4><small>selección real vs pactado (piedras/merma), desvío de cuadrilla, salida en falso — autorizados</small></div>
+  <div class="stage ricardo"><h4>pago</h4><small>requiere factura válida, banca, comprobante</small></div>
+  <div class="stage ricardo"><h4>conciliación</h4><small>vs movimientos bancarios + respaldo</small></div>
+ </div>
+
+ <h2>Explorador de entidades</h2>
+ <p>Da clic en cada entidad. <span class="pill info">azul</span> = operativa (la produce la captura) · <span class="pill ok">verde</span> = contable (la capa que falta modelar). Los <strong>candados</strong> son las reglas duras que pidió José.</p>
+
+ <div class="er">
+  <div class="er-list" id="er-list"></div>
+  <div class="er-detail" id="er-detail"></div>
+ </div>
+
+ <h2>Los 5 candados que definen el producto</h2>
+ <div class="grid c2">
+  <div class="card"><span class="pill danger">Candado 1</span><h3 style="margin-top:8px">Sin corte, no hay pago</h3><p>Toda CxP directa lleva <code>corte_id NOT NULL</code> con FK. No se puede crear un pago "suelto". Cierra el <em>"te lo paso por WhatsApp/Excel"</em>.</p></div>
+  <div class="card"><span class="pill danger">Candado 2</span><h3 style="margin-top:8px">Sin factura, no se paga</h3><p>El status no avanza a <code>pagada</code> sin <code>factura_id</code> validada (CFDI). Hoy es "negociable"; aquí es regla del motor.</p></div>
+  <div class="card"><span class="pill danger">Candado 3</span><h3 style="margin-top:8px">Excepción = trazada</h3><p>Si se paga sin factura, se exige un registro <code>excepcion_pago</code> con autorizador, motivo y notificación. Nunca silenciosa.</p></div>
+  <div class="card"><span class="pill danger">Candado 4</span><h3 style="margin-top:8px">Ajuste autorizado + evidencia</h3><p>Cambiar el monto pactado (merma, desvío, salida en falso) requiere autorización del jefe de acopio y evidencia adjunta.</p></div>
+  <div class="card"><span class="pill danger">Candado 5</span><h3 style="margin-top:8px">2 cuadrillas → aprobación</h3><p>Asignar más de una cuadrilla a una huerta exige aprobación explícita del jefe de acopio (refuerza el HITL de la captura).</p></div>
+  <div class="card" style="background:var(--ok-bg);border-color:#cfe0c2"><span class="pill ok">Resultado</span><h3 style="margin-top:8px">Trazabilidad total</h3><p>Cada peso pagado se puede rastrear hasta su corte, su acuerdo, su factura y su autorización. Eso es lo que el equipo llama "trazabilidad" y José "candados".</p></div>
+ </div>
+
+ <h2>La línea de tiempo completa</h2>
+ <div class="callout">
+  <span class="quote">"El ciclo natural que yo quiero es de atrás hacia delante y ya no regreses. Si te toca regresar, ahí es donde ponemos los candados."</span> <strong>— José</strong>
+ </div>
+ <p>Las etapas <span class="pill info">azules</span> son captura operativa; las <span class="pill ok">verdes</span> son la capa contable. El <span class="pill warn">punto bisagra</span> es el cierre de corte.</p>
+
+ <div style="overflow-x:auto; margin:18px 0">
+  <table class="tbl" style="min-width:880px">
+   <thead><tr><th>Etapa</th><th>Quién / dónde</th><th>Qué pasa</th><th>Dato que produce</th><th>Capa</th></tr></thead>
+   <tbody>
+    <tr><td><strong>1. Visita a huerta</strong></td><td>Acopiador · WhatsApp</td><td>Reporta fruta, daño, volumen, calibres, calidad, fotos. Valida HUE y alertas de altura.</td><td><code>visita</code></td><td><span class="pill info">Captura</span></td></tr>
+    <tr><td><strong>2. Negociación</strong></td><td>Acopiador ↔ productor · WhatsApp + HITL</td><td>Motor de pricing propone precio; si sale de margen, aprueba humano. Acuerdo firmado por WA + PDF.</td><td><code>acuerdo</code> (precio pactado)</td><td><span class="pill info">Captura</span></td></tr>
+    <tr style="background:var(--warn-bg)"><td><strong>3. Corte (cierre)</strong></td><td>Cuadrilla + acarreo</td><td>Se asigna cuadrilla y camión, se recibe evidencia, se cierra con volumen real cortado.</td><td><code>corte</code> cerrado</td><td><span class="pill warn">Bisagra</span></td></tr>
+    <tr><td><strong>4. Derivación de CxP</strong></td><td>Sistema (automático)</td><td>El corte dispara las obligaciones: productor, corte, acarreo, comisión.</td><td><code>cuenta_por_pagar</code> ×N</td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>5. Recepción en empaque</strong></td><td>Producción</td><td>Se selecciona la fruta real → se compara pactado vs real (% de acierto). Dispara ajustes.</td><td><code>ajuste</code></td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>6. Factura</strong></td><td>Proveedor → admin (Eli)</td><td>Llega CFDI, se valida (RFC, total, uso, forma de pago) y se asocia a la CxP.</td><td><code>factura</code> validada</td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>7. Autorización semanal</strong></td><td>José / financiero · miércoles</td><td>Revisión de gasto clasificado. Da luz verde a lo que alcanza el flujo. Puede posponer pagos.</td><td>CxP <code>autorizada</code></td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>8. Pago</strong></td><td>Tesorería (Dani) · banca</td><td>Paga lo autorizado <em>con factura en mano</em>. Adjunta comprobante.</td><td><code>pago</code></td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>9. Conciliación + respaldo</strong></td><td>Tesorería · lunes</td><td>Cuadra pagos vs movimientos bancarios; respalda por año/categoría.</td><td><code>pago.conciliado</code></td><td><span class="pill ok">Contable</span></td></tr>
+    <tr><td><strong>10. Costeo &amp; reportes</strong></td><td>Financiero / contador</td><td>Costo por kilo de la semana, acumulados por proveedor/productor, saldos de clientes.</td><td><code>costeo_semanal</code></td><td><span class="pill ok">Contable</span></td></tr>
+   </tbody>
+  </table>
+ </div>
+
+ <h2>El "ir y regresar" que se elimina</h2>
+ <div class="grid c2">
+  <div class="card" style="border-color:#eccaca">
+   <span class="pill danger">Hoy (Monday + Synology + WhatsApp + CTS)</span>
+   <ul class="clean" style="margin-top:12px">
+    <li class="gap">El corte se manda por WhatsApp, se exporta de Monday a Excel, se recaptura.</li>
+    <li class="gap">La factura vive en Synology; se re-busca y re-valida manualmente.</li>
+    <li class="gap">El pago se registra en Monday y se vuelve a cuadrar a mano el lunes.</li>
+    <li class="gap">Para ver el pasado hay que ir al respaldo en la nube.</li>
+    <li class="gap">Columnas de comunicación operativa mezcladas con datos contables.</li>
+   </ul>
+  </div>
+  <div class="card" style="border-color:#cfe0c2">
+   <span class="pill ok">AvoOlio (una sola fuente)</span>
+   <ul class="clean" style="margin-top:12px">
+    <li class="ok">El corte cerrado deriva las CxP solo. Cero recaptura.</li>
+    <li class="ok">La factura se valida una vez y queda ligada a la CxP.</li>
+    <li class="ok">La conciliación del lunes es un match sugerido automático.</li>
+    <li class="ok">Histórico consultable por número de semana, sin ir al respaldo.</li>
+    <li class="ok">Roles: cada quien ve su vista de los mismos datos.</li>
+   </ul>
+  </div>
+ </div>
+
+ <h2>Cómo se costea un kilo (el reporte que José pide)</h2>
+ <p>El objetivo final del modelo: en el cierre semanal, responder <em>"¿cuánto me costó comprar un kilo de aguacate con servicios?"</em> (el ejemplo de los 34 pesos). Se arma sumando, por semana y por curva de calibre, todas las CxP derivadas más los indirectos prorrateados.</p>
+ <table class="tbl">
+  <thead><tr><th>Componente</th><th>Origen</th><th>Entra al costo por</th></tr></thead>
+  <tbody>
+   <tr><td>Pago a productor (real)</td><td><code>cxp</code> tipo productor + ajuste</td><td>kg seleccionados reales (no pactados)</td></tr>
+   <tr><td>Servicio de corte / cuadrilla</td><td><code>cxp</code> tipo servicio_corte</td><td>$/kg o $/día según catálogo</td></tr>
+   <tr><td>Acarreo / flete a empaque</td><td><code>cxp</code> tipo acarreo</td><td>$/viaje (con ajuste por salida en falso)</td></tr>
+   <tr><td>Comisión de acopio</td><td><code>cxp</code> tipo comision_acopio</td><td>% sobre compra</td></tr>
+   <tr><td>Indirectos (seguro, etc.)</td><td><code>gasto</code> indirecto prorrateado</td><td>prorrateo mensual / kg de la semana</td></tr>
+   <tr style="font-weight:700"><td>= Costo por kilo</td><td><code>costeo_semanal</code></td><td>promedio ponderado por curva de calibre</td></tr>
+  </tbody>
+ </table>
+
+ <div class="callout info">
+  <strong>Nota de diseño.</strong> La <code>cxp</code> conviene modelarla como tabla única con <code>tipo</code> (enum) en vez de cuatro tablas separadas: comparten ciclo de vida (borrador→…→conciliada), factura, ajuste y semana. Cambia solo el beneficiario y la fórmula del monto. Una tabla + un enum + una tabla <code>ajuste</code> 1:N. Mantiene los reportes acumulados (lo que José quiere: "cuánto le debo a HB", "cuánto al productor") como simples <code>GROUP BY</code>.
+ </div>
+
+ <h2>Roles y vistas sobre los mismos datos</h2>
+ <p>Misma base, distinta lente. Lo que José pidió para no ahogar al financiero en columnas de campo:</p>
+ <table class="tbl">
+  <thead><tr><th>Rol</th><th>Persona</th><th>Qué ve / puede hacer</th></tr></thead>
+  <tbody>
+   <tr><td><strong>Acopiador</strong></td><td>campo</td><td>Su captura vía WhatsApp: visitas, negociaciones, cortes. Notas e instrucciones.</td></tr>
+   <tr><td><strong>Jefe de acopio</strong></td><td>—</td><td>Aprueba excepciones, autoriza 2 cuadrillas y ajustes. HITL de pricing.</td></tr>
+   <tr><td><strong>Admin acopio</strong></td><td>Eli</td><td>Recibe y valida facturas; las liga a la CxP.</td></tr>
+   <tr><td><strong>Tesorería</strong></td><td>Dani</td><td>Paga lo autorizado, adjunta comprobantes, concilia y respalda.</td></tr>
+   <tr><td><strong>Financiero</strong></td><td>José</td><td>CxP acumuladas, costeo por kilo, prorrateos, saldos de clientes. Vista limpia, sin ruido operativo.</td></tr>
+   <tr><td><strong>Contador</strong></td><td>Jorge</td><td>Revisa facturas y el costo real por kilo contra el ideal.</td></tr>
+  </tbody>
+ </table>
+
+ <div class="callout info">
+  <strong>En Supabase esto es RLS.</strong> Roles + Row Level Security sobre las mismas tablas, más vistas (<code>v_*</code>) por departamento. El acopiador no necesita ver montos acumulados; el financiero no necesita ver el chat de la cuadrilla. Una base, varias lentes — exactamente el "tablero por área" que dibuja José.
+ </div>
+</div>
+
+<footer class="foot">
+ <img class="mark" src="assets/gota-avoolio.png" alt="AvoOlio"><br>
+ AvoOlio
+</footer>
+
+<script src="assets/avoolio.js"></script>
+<script>
+window.AVO_ENTITIES = {
+ "corte": { kind:"op", title:"corte", desc:"Entidad operativa que produce la captura al cerrar el FlujoSeguimientoCorte. Es el origen de toda obligación de pago.",
+  fields:[
+   ["id","uuid","PK"],
+   ["acuerdo_id","fk","→ negociacion/acuerdo (precio pactado)"],
+   ["huerta_id","fk","→ core.huerta"],
+   ["empresa_corte","fk","catálogo de empresas de corte"],
+   ["cuadrilla","fk","cuadrilla asignada (fuzzy match)"],
+   ["acarreo_proveedor","fk","proveedor de camión"],
+   ["punto_reunion","text","prellenado por histórico de huerta"],
+   ["volumen_comprado_kg","numeric","volumen cortado real"],
+   ["tipo_corte","text","gramaje (ej. 110, 120, 150)"],
+   ["semana","int","número de semana ISO — filtro principal"],
+   ["status","enum","programado · en_curso · completado"],
+  ],
+  note:"Producida por la capa de captura. La capa contable la trata como <strong>solo lectura</strong> y cuelga de ella las CxP." },
+
+ "cxp": { kind:"acc", title:"cuenta_por_pagar", desc:"Tabla única (con enum tipo) para las cuatro obligaciones que nacen de un corte. Comparten ciclo de vida, factura y semana.",
+  fields:[
+   ["id","uuid","PK"],
+   ["corte_id","fk NOT NULL","origen obligatorio"],
+   ["tipo","enum","productor · servicio_corte · acarreo · comision_acopio"],
+   ["beneficiario_id","fk","productor / empresa+cuadrilla / proveedor / acopiador"],
+   ["monto_estimado","numeric","derivado del precio pactado"],
+   ["monto_final","numeric","tras ajustes (= base de pago)"],
+   ["factura_id","fk NULL","requerida para pagar"],
+   ["semana","int","heredada del corte"],
+   ["status","enum","borrador→por_validar→validada→autorizada→pagada→conciliada→respaldada"],
+  ],
+  rules:[
+   "<code>corte_id</code> es NOT NULL con FK: sin corte no existe la obligación (Candado 1).",
+   "No puede pasar a <code>pagada</code> sin <code>factura_id</code> válida, salvo vía <code>excepcion_pago</code> (Candados 2 y 3).",
+  ],
+  note:"Los reportes que pide José (<em>'cuánto le debo a HB', 'cuánto al productor'</em>) son un <code>GROUP BY beneficiario_id, status</code> sobre esta tabla." },
+
+ "ajuste": { kind:"acc", title:"ajuste", desc:"Modifica el monto de una CxP por la realidad del corte. Siempre autorizado y con evidencia.",
+  fields:[
+   ["id","uuid","PK"],
+   ["cxp_id","fk","→ cuenta_por_pagar"],
+   ["motivo","enum","seleccion_real_vs_pactado · desvio_cuadrilla · salida_en_falso · otro"],
+   ["monto_delta","numeric","+ / − sobre el estimado"],
+   ["evidencia_url","text","foto/doc en R2"],
+   ["autorizado_por","fk","jefe de acopio / HITL"],
+   ["creado_en","timestamptz",""],
+  ],
+  rules:["Todo ajuste requiere <code>autorizado_por</code> + evidencia (Candado 4)."],
+  note:"El ajuste de productor por 'piedras/merma' es el ejemplo de José: el pactado eran 63, pero se paga sobre lo realmente seleccionado. Aquí se calcula el <strong>% de acierto</strong> (no 'desviación') por acopiador." },
+
+ "factura": { kind:"acc", title:"factura", desc:"CFDI del proveedor. Validada por administración (Eli) antes de habilitar el pago.",
+  fields:[
+   ["id","uuid","PK"],
+   ["cfdi_uuid","text UNIQUE","folio fiscal"],
+   ["proveedor_rfc","text",""],
+   ["total","numeric",""],
+   ["forma_pago","text","contra la orden"],
+   ["uso_cfdi","text",""],
+   ["validada_por","fk","Eli / admin"],
+   ["archivo_url","text","Synology / R2"],
+   ["status","enum","recibida · validada · rechazada"],
+  ],
+  rules:["Sin <code>status = validada</code>, la CxP asociada no puede pagarse (Candado 2)."],
+  note:"Hoy Eli las sube a Synology y se re-verifican manualmente. El modelo absorbe ese doble trabajo: una sola validación, un solo lugar." },
+
+ "pago": { kind:"acc", title:"pago", desc:"Egreso real en banca. Liga una o varias CxP con su comprobante y, después, con el movimiento bancario.",
+  fields:[
+   ["id","uuid","PK"],
+   ["cxp_ids","fk[]","una o varias CxP"],
+   ["fecha_pago","date",""],
+   ["banco","text","cuenta de salida"],
+   ["num_comprobante","text","folio de la banca"],
+   ["comprobante_url","text","PDF en Synology/R2"],
+   ["movimiento_bancario_ref","text","para conciliación del lunes"],
+   ["conciliado","bool","cuadrado vs estado de cuenta"],
+  ],
+  note:"Reproduce el proceso de Dani: pagar → adjuntar comprobante → lunes conciliar contra movimientos → respaldar. El paso 'lunes' deja de ser manual: es un match automático por monto/fecha sugerido." },
+
+ "excepcion_pago": { kind:"acc", title:"excepcion_pago", desc:"Registra los pagos hechos sin factura. La válvula que José tolera pero quiere trazada.",
+  fields:[
+   ["id","uuid","PK"],
+   ["cxp_id","fk",""],
+   ["motivo","text","por qué se pagó sin factura"],
+   ["autorizado_por","fk","quién lo aprobó"],
+   ["compromiso_factura","date","cuándo llegará la factura"],
+   ["notificado_a","fk[]","financiero / contador"],
+  ],
+  rules:["Es el ÚNICO camino para pagar sin factura. Genera notificación (Candado 3)."],
+  note:"Convierte el 'nos echamos la mano al proveedor' informal en un evento auditable con dueño y fecha de compromiso." },
+
+ "gasto": { kind:"acc", title:"gasto", desc:"Clasificación del gasto semanal que recorre Dani los miércoles. Incluye indirectos a prorratear.",
+  fields:[
+   ["id","uuid","PK"],
+   ["area","enum","empaque · productores · aceite"],
+   ["categoria","enum","costo_venta · flete · mantenimiento · nomina · seguros · honorarios · comisiones · apeam · combustible · gestion_comercial"],
+   ["cxp_id","fk NULL","si deriva de una obligación"],
+   ["es_indirecto","bool","→ activa prorrateo"],
+   ["prorrateo_meses","int","ej. 12 (seguro Sura)"],
+   ["semana","int",""],
+  ],
+  note:"El seguro Sura ($632K) es el caso de indirecto: se prorratea en 12 meses. El modelo lo reparte solo en vez de que José lo haga a mano cada mes." },
+
+ "cuenta_por_cobrar": { kind:"acc", title:"cuenta_por_cobrar", desc:"El otro lado: lo que deben los clientes (Nacional, exportación). José quiere monitorear que no crezca.",
+  fields:[
+   ["id","uuid","PK"],
+   ["cliente_id","fk","Nacional/Leonel, exportación, etc."],
+   ["carga_ref","text","1ra / 2da carga"],
+   ["monto","numeric",""],
+   ["fecha_anticipo","date","típico +15 días"],
+   ["fecha_liquidacion","date","típico +21 días"],
+   ["tipo_cambio","numeric","para exportación (USD)"],
+   ["status","enum","abierta · anticipo · liquidada"],
+  ],
+  note:"La deuda de Nacional (~$2.45M) es lo que José quiere vigilar de cerca por ser cliente nuevo. Dashboard de saldos con alerta si crece." },
+
+ "costeo_semanal": { kind:"acc", title:"costeo_semanal", desc:"Vista/materialización del costo por kilo de la semana, ponderado por curva de calibre.",
+  fields:[
+   ["semana","int","PK parcial"],
+   ["area","enum",""],
+   ["costo_kilo_promedio","numeric","el famoso '34 pesos'"],
+   ["curva_calibre","jsonb","costo por calibre (48s, 60s, 70s, 84s…)"],
+   ["total_directos","numeric","suma CxP de la semana"],
+   ["total_indirectos","numeric","prorrateo asignado"],
+  ],
+  note:"El entregable cumbre para José: tablero por número de semana con el costo real de comprar un kilo, comparable contra el precio ideal del motor de pricing." },
+};
+initEntityExplorer();
+</script>
+</body>
+</html>

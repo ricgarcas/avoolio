@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvoOlio · Demo &amp; UI/UX</title>
+<link rel="stylesheet" href="assets/avoolio.css">
+</head>
+<body>
+<header class="topbar">
+ <a class="brand" href="index.html"><img src="assets/gota-avoolio.png" alt="AvoOlio"><span class="wm">Avo<b>Olio</b></span></a>
+ <nav>
+  <a href="index.html">Resumen</a>
+  <a href="demo.html">Demo</a>
+  <!-- Ocultas para el demo enfocado · páginas intactas y recuperables:
+  <a href="modelo.html">Modelo y flujo</a>
+  <a href="plan.html">Gaps y plan</a>
+  -->
+ </nav>
+</header>
+
+<div class="wrap wide">
+ <section class="hero">
+  <div class="kicker">El happy path de esta semana · datos de ejemplo</div>
+  <h1>Demo navegable: Catálogos → Corte</h1>
+  <p>El primer entregable aterrizable: los <strong>catálogos generales de acopio</strong> (huertas, productores, acopiadores, cuadrillas, acarreo) y un alta de corte que se <strong>autollena desde ellos</strong>. Es la base maestra de la que cuelga todo lo demás. Lo de abajo es maqueta con datos de ejemplo, pero es la estructura real que propone el modelo.</p>
+ </section>
+
+ <h2>Mini-app de gestión</h2>
+ <p>Abre en <strong>Catálogos</strong>. Dale a <strong>＋ Programar corte</strong>: eliges una huerta y el punto de reunión, la báscula, el productor y la altura se llenan solos del catálogo (editables). Si la altura es &lt;2100, salta la alerta de plaga. Al programar, el corte aparece en el tablero. El resto del menú (Cuentas por pagar, Costeo…) son las fases siguientes.</p>
+
+ <p><a class="btn olive" href="app.html" target="_blank" rel="noopener">Abrir a pantalla completa ↗</a></p>
+
+ <div class="appframe bleed">
+  <div class="appwin">
+   <div class="appchrome">
+    <i></i><i></i><i></i>
+    <span class="url">app.avoolio.mx</span>
+    <a class="full-link" href="app.html" target="_blank" rel="noopener">Pantalla completa ↗</a>
+   </div>
+   <div class="appgrid" id="appdemo"></div>
+  </div>
+ </div>
+ <p class="muted" style="font-size:.85rem">Maqueta con datos ficticios. Está pensada como vista de escritorio (tesorería / gestión); para verla cómoda, ábrela a pantalla completa.</p>
+
+ <h2>Principios de UI/UX</h2>
+ <p>El "para qué" de cada decisión de pantalla, antes de pixeles. Esto debería guiar al equipo de frontend, independientemente del estilo visual final.</p>
+ <div class="card">
+  <div class="principle"><div class="num">1</div><div><h3>La semana es la protagonista</h3><p>Todo el negocio se organiza por número de semana ISO. El selector de semana es el eje de navegación, no un filtro escondido. Costos, pagos, cortes y saldos siempre responden a "¿qué semana estoy viendo?".</p></div></div>
+  <div class="principle"><div class="num">2</div><div><h3>Mismos datos, distinta lente</h3><p>Una sola base, vistas por rol (RLS). El acopiador no ve montos acumulados; el financiero no ve el chat de la cuadrilla. El switcher de rol de la demo lo ilustra.</p></div></div>
+  <div class="principle"><div class="num">3</div><div><h3>Los candados se ven</h3><p>Las reglas duras se muestran, no se esconden: una CxP sin factura aparece bloqueada y explica por qué; una huerta en alerta de altura se pinta sola. Y son <em>candados distintos</em>: el de altura es de supervisión; el de factura es de pago.</p></div></div>
+  <div class="principle"><div class="num">4</div><div><h3>Hereda Monday, no reinventa</h3><p>Grupos por estado + columnas de status de color + volumen por grupo: el lenguaje visual que el equipo ya domina. La curva de aprendizaje es casi cero; cambia el motor de reglas debajo, no la metáfora.</p></div></div>
+  <div class="principle"><div class="num">5</div><div><h3>Captura en el chat, gestión en la web</h3><p>El campo sigue en WhatsApp (cero fricción para el acopiador). La gestión, tesorería y reportes viven en la web, donde tienen pantalla y teclado. Cada contexto, su herramienta.</p></div></div>
+ </div>
+
+ <div class="callout info" style="margin-top:22px">
+  <strong>Nota.</strong> Esta pantalla es una propuesta de estructura y lenguaje visual, no un diseño cerrado. Si el equipo de frontend ya tiene una dirección, esto sirve para validar que cubre las vistas clave (operativa, cuentas por pagar con candado, costeo y catálogos) y los cinco principios de arriba.
+ </div>
+</div>
+
+<footer class="foot">
+ <img class="mark" src="assets/gota-avoolio.png" alt="AvoOlio"><br>
+ AvoOlio
+</footer>
+
+<script src="assets/avoolio.js"></script>
+<script src="assets/demo-data.js"></script>
+<script>initAppDemo();</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvoOlio · App (demo)</title>
+<link rel="stylesheet" href="assets/avoolio.css">
+<style>
+  html,body { height:100%; }
+  body { margin:0; background:var(--avo-deep); overflow:hidden; }
+  .appwin.full { min-height:100vh; }
+  .demo-flag { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:60;
+    font-family:var(--head); font-size:.74rem; color:#fff; background:rgba(31,30,26,.72);
+    border-radius:999px; padding:5px 14px; backdrop-filter:blur(6px); }
+  .demo-flag a { color:var(--gold-pale); }
+</style>
+</head>
+<body>
+<div class="appwin full">
+  <div class="appgrid" id="appdemo"></div>
+</div>
+<div class="demo-flag">Maqueta con datos de ejemplo · <a href="demo.html">volver al análisis</a></div>
+<script src="assets/avoolio.js"></script>
+<script src="assets/demo-data.js"></script>
+<script>initAppDemo();</script>
+</body>
+</html>

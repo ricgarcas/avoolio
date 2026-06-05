@@ -1,0 +1,231 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* =============================================================================
+   AgroMesh — Sistema de diseño v1.0 (tokens bloqueados)
+   Filosofía: precisión de ingeniería. Bordes, no sombras. Color con significado.
+   Modo oscuro por defecto, claro opcional. Densidad alta.
+
+   Arquitectura de tokens:
+   1. Tokens crudos de AgroMesh (--bg-*, --brand, --success…) por tema.
+   2. Alias semánticos de shadcn (--background, --primary, --border…) que
+      APUNTAN a los tokens AgroMesh, para que los componentes de shadcn hereden
+      el look del spec sin tocar su código.
+   3. @theme inline expone ambos como utilitarios de Tailwind v4.
+   ============================================================================= */
+
+/* Dark por [data-theme] (default del producto) y también por .dark, para que
+   las utilidades `dark:` de los componentes shadcn sigan funcionando. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
+/* -----------------------------------------------------------------------------
+   MODO OSCURO (default)
+   ----------------------------------------------------------------------------- */
+:root,
+[data-theme="dark"] {
+  /* — Tokens crudos AgroMesh — */
+  --bg-default: #080f12;
+  --bg-raised: #13181c;
+  --bg-hover: #1a2024;
+  --bg-active: #222a30;
+  --border: #222a30;
+  --border-strong: #2e373d;
+
+  --text-primary: #f4f6f7;
+  --text-muted: #8a9396;
+  --text-faint: #5a6166;
+
+  --brand: #65e06f; /* atención, nunca fondo (salvo CTA primario) */
+  --brand-contrast: #08120a;
+
+  --success: #48c281;
+  --warning: #f2b040;
+  --danger: #e06058;
+  --info: #5a9fe0;
+
+  --mesh: #5dd3f0; /* IA — independiente del verde, nunca se lee como CTA */
+
+  color-scheme: dark;
+
+  /* — Alias semánticos shadcn → AgroMesh — */
+  --background: var(--bg-default);
+  --foreground: var(--text-primary);
+  --card: var(--bg-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-contrast);
+  --secondary: var(--bg-raised);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-raised);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--bg-hover);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--brand);
+
+  --sidebar: var(--bg-default);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-contrast);
+  --sidebar-accent: var(--bg-hover);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand);
+
+  --chart-1: var(--brand);
+  --chart-2: var(--info);
+  --chart-3: var(--warning);
+  --chart-4: var(--danger);
+  --chart-5: var(--mesh);
+
+  /* Radio base nítido — 4px. El spec usa 2/4/8; nunca 9999. */
+  --radius: 0.25rem;
+}
+
+/* -----------------------------------------------------------------------------
+   MODO CLARO (opcional)
+   ----------------------------------------------------------------------------- */
+[data-theme="light"] {
+  --bg-default: #ffffff;
+  --bg-raised: #f5f7f8;
+  --bg-hover: #eceff1;
+  --bg-active: #e2e7ea;
+  --border: #d7dde0;
+  --border-strong: #c2cace;
+
+  --text-primary: #0a0f12;
+  --text-muted: #5a6166;
+  --text-faint: #8a9396;
+
+  /* En claro el verde se oscurece a #1F8030 para cumplir contraste AA.
+     Los semánticos en claro están PENDIENTES de auditoría de contraste
+     (spec §07 "por hacer"); valores AA provisionales. */
+  --brand: #1f8030;
+  --brand-contrast: #ffffff;
+
+  --success: #2e7d52;
+  --warning: #9a6500;
+  --danger: #c23b33;
+  --info: #2c6fb5;
+
+  --mesh: #0e8fb3;
+
+  color-scheme: light;
+}
+
+/* -----------------------------------------------------------------------------
+   Mapeo a Tailwind v4. `inline` = los utilitarios referencian la var() en vivo,
+   así el cambio de tema funciona sin recompilar.
+   ----------------------------------------------------------------------------- */
+@theme inline {
+  /* Alias semánticos shadcn */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Tokens AgroMesh expuestos directo (bg-bg-default, text-brand, bg-success…) */
+  --color-bg-default: var(--bg-default);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-brand: var(--brand);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-mesh: var(--mesh);
+
+  /* Tipografía: Geist Sans (UI) · JetBrains Mono (números, IDs, timestamps) */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Escala tipográfica del spec — 12 / 13 / 15 / 20 / 24 / 30 / 40 */
+  --text-caption: 12px;
+  --text-caption--line-height: 1.4;
+  --text-ui: 13px;
+  --text-ui--line-height: 1.5;
+  --text-body: 15px;
+  --text-body--line-height: 1.5;
+  --text-h3: 20px;
+  --text-h3--line-height: 1.25;
+  --text-h2: 24px;
+  --text-h2--line-height: 1.25;
+  --text-h1: 30px;
+  --text-h1--line-height: 1.2;
+  --text-display: 40px;
+  --text-display--line-height: 1.15;
+
+  /* Radios nítidos — 2 pills/inputs · 4 botones/tarjetas · 8 modales. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+}
+
+/* -----------------------------------------------------------------------------
+   Base
+   ----------------------------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    /* Base de cuerpo 15px — densidad estilo Oxide, menor que los 16px de web. */
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Cifras en mono: siempre tabulares y con tracking ajustado. */
+  .font-mono,
+  code,
+  kbd {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em; /* tracking-tight */
+  }
+
+  /* Foco siempre visible: contorno de 2px en verde con 2px de separación.
+     Nunca outline: none. */
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
