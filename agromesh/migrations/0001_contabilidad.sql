@@ -653,3 +653,22 @@ END $$;
 CREATE TRIGGER trg_lineas_inmutables
   BEFORE INSERT OR UPDATE OR DELETE ON contabilidad.linea_asiento
   FOR EACH ROW EXECUTE FUNCTION contabilidad.bloquear_lineas_confirmadas();
+
+-- =====================================================================
+-- TRIGGERS — candado de periodo cerrado
+-- =====================================================================
+CREATE FUNCTION contabilidad.check_periodo_abierto() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_estado contabilidad.periodo_estado; v_anio int; v_mes int;
+BEGIN
+  SELECT estado, anio, mes INTO v_estado, v_anio, v_mes
+    FROM contabilidad.periodo_contable WHERE id = NEW.periodo_id;
+  IF v_estado = 'cerrado' THEN
+    RAISE EXCEPTION 'periodo %-% está cerrado: no admite asientos', v_anio, lpad(v_mes::text, 2, '0');
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_asiento_periodo_abierto
+  BEFORE INSERT OR UPDATE OF periodo_id ON contabilidad.asiento_contable
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.check_periodo_abierto();
