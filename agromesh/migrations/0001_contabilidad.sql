@@ -601,3 +601,55 @@ CREATE TRIGGER trg_asiento_balanceado
   FOR EACH ROW
   WHEN (OLD.estado = 'borrador' AND NEW.estado = 'confirmado')
   EXECUTE FUNCTION contabilidad.check_asiento_balanceado();
+
+-- =====================================================================
+-- TRIGGERS — inmutabilidad del journal
+-- =====================================================================
+-- Confirmado: solo se permite la transición a revertido sin tocar nada más.
+-- Revertido: intocable. Borrador: libre. Corrección = asiento de reversa
+-- nuevo apuntando asiento_revertido_id al original.
+CREATE FUNCTION contabilidad.bloquear_asiento_inmutable() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.estado <> 'borrador' THEN
+      RAISE EXCEPTION 'asiento % es inmutable (estado %): usa un asiento de reversa', OLD.id, OLD.estado;
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF OLD.estado = 'revertido' THEN
+    RAISE EXCEPTION 'asiento % está revertido y es inmutable', OLD.id;
+  END IF;
+
+  IF OLD.estado = 'confirmado' THEN
+    IF NOT (NEW.estado = 'revertido'
+            AND (to_jsonb(NEW) - 'estado' - 'updated_at')
+              = (to_jsonb(OLD) - 'estado' - 'updated_at')) THEN
+      RAISE EXCEPTION 'asiento % confirmado es inmutable: usa un asiento de reversa', OLD.id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_asiento_inmutable
+  BEFORE UPDATE OR DELETE ON contabilidad.asiento_contable
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.bloquear_asiento_inmutable();
+
+-- Las líneas solo se tocan mientras el asiento está en borrador.
+CREATE FUNCTION contabilidad.bloquear_lineas_confirmadas() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_estado contabilidad.asiento_estado;
+BEGIN
+  SELECT estado INTO v_estado FROM contabilidad.asiento_contable
+   WHERE id = COALESCE(NEW.asiento_id, OLD.asiento_id);
+  IF v_estado <> 'borrador' THEN
+    RAISE EXCEPTION 'las líneas del asiento % son inmutables (estado %)',
+      COALESCE(NEW.asiento_id, OLD.asiento_id), v_estado;
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END $$;
+
+CREATE TRIGGER trg_lineas_inmutables
+  BEFORE INSERT OR UPDATE OR DELETE ON contabilidad.linea_asiento
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.bloquear_lineas_confirmadas();
