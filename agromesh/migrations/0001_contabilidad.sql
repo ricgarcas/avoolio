@@ -561,3 +561,43 @@ BEGIN
   END LOOP;
 END $$;
 -- linea_asiento no lleva trigger: solo tiene created_at.
+
+-- =====================================================================
+-- TRIGGERS — ciclo de vida del asiento (partida doble)
+-- =====================================================================
+-- Los asientos nacen en borrador; las líneas se insertan después.
+CREATE FUNCTION contabilidad.asiento_nace_borrador() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.estado <> 'borrador' THEN
+    RAISE EXCEPTION 'los asientos nacen en borrador (recibí %)', NEW.estado;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_asiento_nace_borrador
+  BEFORE INSERT ON contabilidad.asiento_contable
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.asiento_nace_borrador();
+
+-- Confirmar exige: tiene líneas y Σdebe = Σhaber (en MXN, moneda del trial balance).
+CREATE FUNCTION contabilidad.check_asiento_balanceado() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_debe numeric; v_haber numeric;
+BEGIN
+  SELECT COALESCE(SUM(debe_mxn), 0), COALESCE(SUM(haber_mxn), 0)
+    INTO v_debe, v_haber
+    FROM contabilidad.linea_asiento WHERE asiento_id = NEW.id;
+  IF v_debe = 0 AND v_haber = 0 THEN
+    RAISE EXCEPTION 'asiento % sin líneas no puede confirmarse', NEW.id;
+  END IF;
+  IF v_debe IS DISTINCT FROM v_haber THEN
+    RAISE EXCEPTION 'asiento desbalanceado: debe=% haber=%', v_debe, v_haber;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_asiento_balanceado
+  BEFORE UPDATE OF estado ON contabilidad.asiento_contable
+  FOR EACH ROW
+  WHEN (OLD.estado = 'borrador' AND NEW.estado = 'confirmado')
+  EXECUTE FUNCTION contabilidad.check_asiento_balanceado();
