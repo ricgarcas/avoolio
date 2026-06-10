@@ -42,24 +42,24 @@
 
 ## Track de Ricardo (Accounting — boundary contractor) · 6 jun → 15 ago
 
-Lo vinculante es `30_integrations/ACCOUNTING_REQUIREMENTS.md` (contrato de datos). El modelo en `10_data_model/accounting/` es referencia no vinculante. Tú decides: stack, PAC, cash vs accrual, mecanismo de integración.
+Lo vinculante es `30_integrations/ACCOUNTING_REQUIREMENTS.md` (contrato de datos). El modelo en `10_data_model/accounting/` es referencia no vinculante. Tú decides: stack, PAC, base de efectivo vs devengado, mecanismo de integración. **Terminología:** ver `docs/GLOSARIO_CONTABLE.md` (jerga contable mexicana, fuente de verdad).
 
 | Issue | Sprint | Fechas | Entregable | Pts | Estado |
 |-------|--------|--------|-----------|-----|--------|
-| [AGR-13](https://linear.app/agromeshai/issue/AGR-13) | S0 | ahora – 13 jun | Modelo contable: ledger, chart of accounts, journal | 5 | **Todo — arrancar ya** |
+| [AGR-13](https://linear.app/agromeshai/issue/AGR-13) | S0 | ahora – 13 jun | Modelo contable: libro diario, catálogo de cuentas, asientos | 5 | **Todo — arrancar ya** |
 | [AGR-25](https://linear.app/agromeshai/issue/AGR-25) | S1 | 15 – 26 jun | Cost capture (acarreo / corte / fijos) ligado a deals | 5 | Todo |
-| [AGR-37](https://linear.app/agromeshai/issue/AGR-37) | S2 | 29 jun – 10 jul | **P&L por calibre** → Inicio Admin (4 widgets) | 5 | Backlog |
-| [AGR-44](https://linear.app/agromeshai/issue/AGR-44) | S3 | 13 – 24 jul | AR/AP + cobranza 21–25 días | 5 | Backlog |
+| [AGR-37](https://linear.app/agromeshai/issue/AGR-37) | S2 | 29 jun – 10 jul | **Estado de resultados por calibre** → Inicio Admin (4 widgets) | 5 | Backlog |
+| [AGR-44](https://linear.app/agromeshai/issue/AGR-44) | S3 | 13 – 24 jul | CxC/CxP + cobranza 21–25 días | 5 | Backlog |
 | [AGR-45](https://linear.app/agromeshai/issue/AGR-45) | S3 | 13 – 24 jul | Spike CFDI 4.0 (elegir PAC, decidir approach) | 3 | Backlog |
 | — | S4 | 27 jul – 7 ago | *(vacío — colchón / adelantar CFDI)* | 0 | — |
-| [AGR-68](https://linear.app/agromeshai/issue/AGR-68) | S5 | 10 – 21 ago | Tie sales orders → AR (receivables ledger) | 3 | Backlog |
+| [AGR-68](https://linear.app/agromeshai/issue/AGR-68) | S5 | 10 – 21 ago | Ligar pedidos de venta → CxC (cuentas por cobrar) | 3 | Backlog |
 | [AGR-87](https://linear.app/agromeshai/issue/AGR-87) | Post-V1 | backlog | Full CFDI/SAT invoicing build | 8 | Backlog |
 
 **Antes de cerrar S0 hay que confirmarle al equipo:** (1) mecanismo de integración (recomendado: vistas read-only en Supabase + tablas de output propias), (2) que puedes producir los 6 outputs del contrato, (3) spec a nivel de campo de tus tablas/endpoints para que Abisai cablee los dashboards.
 
-**Los 6 outputs obligatorios** (todos por `empacadora_id` + periodo): P&L por calibre · AR aging · AP status · business health inputs · CFDI status por orden · period close summary.
+**Los 6 reportes obligatorios** (todos por `empacadora_id` + periodo): estado de resultados por calibre · antigüedad de saldos de CxC · estatus de CxP · salud del negocio · estatus de timbrado por pedido · cierre mensual.
 
-**No negociables:** CFDI 4.0 vía PAC certificado · partida doble · multi-moneda MXN/USD con FX gain/loss (NIF) · COGS por calibre · RLS por tenant · journal inmutable.
+**No negociables:** CFDI 4.0 vía PAC certificado · partida doble · multi-moneda MXN/USD con fluctuación cambiaria (NIF) · costo de ventas por calibre · RLS por tenant · libro diario inmutable.
 
 > ⚠️ Carga personal: ~5 pts/sprint es viable en paralelo, pero S3 (8 pts: AR/AP + spike CFDI) cae a mediados de julio, justo cuando arranca tu trabajo nuevo. S4 está vacío — úsalo de colchón o adelanta el spike CFDI a S2.
 

@@ -17,14 +17,16 @@ Contrato: `blueprint/30_integrations/ACCOUNTING_REQUIREMENTS.md`.
 
 ## Las 6 vistas del contrato
 
-| Vista | Consume | Granularidad |
-|---|---|---|
-| `out_pnl_calibre` | Admin Inicio (4 widgets) | empacadora + periodo + calibre |
-| `out_ar_aging` | Ventas Embarques + Admin | empacadora + orden + importador |
-| `out_ap_status` | Admin | empacadora + acuerdo/corte + acreedor |
-| `out_salud_negocio` | Owner | empacadora + periodo |
-| `out_cfdi_status` | Ventas Pedidos | empacadora + orden_venta |
-| `out_cierre_periodo` | Admin + Owner | empacadora + periodo |
+Terminología en prosa: `docs/GLOSARIO_CONTABLE.md` (jerga contable mexicana).
+
+| Vista | Reporte (en cristiano) | Consume | Granularidad |
+|---|---|---|---|
+| `out_pnl_calibre` | Estado de resultados por calibre | Admin Inicio (4 widgets) | empacadora + periodo + calibre |
+| `out_ar_aging` | Antigüedad de saldos de CxC | Ventas Embarques + Admin | empacadora + orden + importador |
+| `out_ap_status` | Estatus de cuentas por pagar | Admin | empacadora + acuerdo/corte + acreedor |
+| `out_salud_negocio` | Salud del negocio | Owner | empacadora + periodo |
+| `out_cfdi_status` | Estatus de timbrado por pedido | Ventas Pedidos | empacadora + orden_venta |
+| `out_cierre_periodo` | Cierre mensual | Admin + Owner | empacadora + periodo |
 
 Las columnas exactas están fijadas por test: `tests/09_contrato_outputs.sql`.
 Cambiar una columna = romper el contrato = coordinar antes.
