@@ -537,3 +537,27 @@ ALTER TABLE contabilidad.pago
     (aplicado_a = 'cxc' AND cxc_id IS NOT NULL AND cxp_id IS NULL) OR
     (aplicado_a = 'cxp' AND cxp_id IS NOT NULL AND cxc_id IS NULL)
   );
+
+-- =====================================================================
+-- TRIGGERS — updated_at
+-- =====================================================================
+CREATE FUNCTION contabilidad.set_updated_at() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = clock_timestamp();
+  RETURN NEW;
+END $$;
+
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'config_contable','periodo_contable','cuenta_contable','asiento_contable',
+    'costo_operativo','cuenta_por_cobrar','cuenta_por_pagar','pago','factura_cfdi'
+  ] LOOP
+    EXECUTE format(
+      'CREATE TRIGGER trg_%s_updated_at BEFORE UPDATE ON contabilidad.%I
+       FOR EACH ROW EXECUTE FUNCTION contabilidad.set_updated_at()', t, t);
+  END LOOP;
+END $$;
+-- linea_asiento no lleva trigger: solo tiene created_at.
