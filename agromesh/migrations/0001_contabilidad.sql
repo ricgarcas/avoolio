@@ -737,3 +737,32 @@ END $$;
 CREATE TRIGGER trg_pago_aplica
   AFTER INSERT OR UPDATE OR DELETE ON contabilidad.pago
   FOR EACH ROW EXECUTE FUNCTION contabilidad.aplicar_pago();
+
+-- =====================================================================
+-- RLS — aislamiento por tenant
+-- =====================================================================
+-- El tenant actual se resuelve vía esta función. HOY lee el setting
+-- app.empacadora_id; cuando AGR-8 defina el modelo usuario/JWT en Supabase,
+-- SOLO se cambia el cuerpo de esta función (las políticas no se tocan):
+--   p.ej. (current_setting('request.jwt.claims', true)::jsonb ->> 'empacadora_id')::uuid
+CREATE FUNCTION contabilidad.current_empacadora() RETURNS uuid
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(current_setting('app.empacadora_id', true), '')::uuid
+$$;
+
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'config_contable','periodo_contable','cuenta_contable','asiento_contable',
+    'linea_asiento','costo_operativo','cuenta_por_cobrar','cuenta_por_pagar',
+    'pago','factura_cfdi'
+  ] LOOP
+    EXECUTE format('ALTER TABLE contabilidad.%I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON contabilidad.%I
+         USING (empacadora_id = contabilidad.current_empacadora())
+         WITH CHECK (empacadora_id = contabilidad.current_empacadora())', t);
+  END LOOP;
+END $$;
+-- Sin FORCE: el owner del schema (jobs internos del módulo) opera cross-tenant.
