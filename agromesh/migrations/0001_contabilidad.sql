@@ -531,12 +531,7 @@ ALTER TABLE contabilidad.linea_asiento
     (COALESCE(haber_mxn, 0) > 0 AND COALESCE(debe_mxn, 0) = 0)
   );
 
--- Un pago aplica a exactamente un documento, consistente con aplicado_a.
-ALTER TABLE contabilidad.pago
-  ADD CONSTRAINT chk_pago_destino CHECK (
-    (aplicado_a = 'cxc' AND cxc_id IS NOT NULL AND cxp_id IS NULL) OR
-    (aplicado_a = 'cxp' AND cxp_id IS NOT NULL AND cxc_id IS NULL)
-  );
+-- Pago<->documento ya viene garantizado por ck_pago_cxc_or_cxp en la referencia.
 
 -- =====================================================================
 -- TRIGGERS — updated_at
@@ -691,3 +686,54 @@ END $$;
 CREATE TRIGGER trg_linea_cuenta_posteable
   BEFORE INSERT OR UPDATE OF cuenta_id ON contabilidad.linea_asiento
   FOR EACH ROW EXECUTE FUNCTION contabilidad.check_cuenta_posteable();
+
+-- =====================================================================
+-- TRIGGERS — pagos recalculan saldo y estado (sin drift)
+-- =====================================================================
+CREATE FUNCTION contabilidad.aplicar_pago() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_cxc uuid; v_cxp uuid;
+BEGIN
+  v_cxc := COALESCE(NEW.cxc_id, OLD.cxc_id);
+  v_cxp := COALESCE(NEW.cxp_id, OLD.cxp_id);
+
+  IF v_cxc IS NOT NULL THEN
+    UPDATE contabilidad.cuenta_por_cobrar c SET
+      saldo_pendiente_usd = c.monto_usd - pagado.total,
+      estado = CASE
+        WHEN c.estado = 'cancelada' THEN c.estado
+        WHEN pagado.total >= c.monto_usd THEN 'pagada'::contabilidad.cxc_estado
+        WHEN pagado.total > 0 THEN 'parcial'::contabilidad.cxc_estado
+        ELSE 'pendiente'::contabilidad.cxc_estado
+      END,
+      fecha_pago_real = CASE WHEN pagado.total >= c.monto_usd THEN pagado.ultima ELSE NULL END
+    FROM (
+      SELECT COALESCE(SUM(p.monto_usd), 0) AS total, MAX(p.fecha_pago) AS ultima
+        FROM contabilidad.pago p WHERE p.cxc_id = v_cxc
+    ) pagado
+    WHERE c.id = v_cxc;
+  END IF;
+
+  IF v_cxp IS NOT NULL THEN
+    UPDATE contabilidad.cuenta_por_pagar c SET
+      saldo_pendiente_mxn = c.monto_mxn - pagado.total,
+      estado = CASE
+        WHEN c.estado = 'cancelada' THEN c.estado
+        WHEN pagado.total >= c.monto_mxn THEN 'pagada'::contabilidad.cxp_estado
+        WHEN pagado.total > 0 THEN 'parcial'::contabilidad.cxp_estado
+        ELSE 'pendiente'::contabilidad.cxp_estado
+      END,
+      fecha_pago_real = CASE WHEN pagado.total >= c.monto_mxn THEN pagado.ultima ELSE NULL END
+    FROM (
+      SELECT COALESCE(SUM(p.monto_mxn), 0) AS total, MAX(p.fecha_pago) AS ultima
+        FROM contabilidad.pago p WHERE p.cxp_id = v_cxp
+    ) pagado
+    WHERE c.id = v_cxp;
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END $$;
+
+CREATE TRIGGER trg_pago_aplica
+  AFTER INSERT OR UPDATE OR DELETE ON contabilidad.pago
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.aplicar_pago();
