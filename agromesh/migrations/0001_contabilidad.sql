@@ -1074,3 +1074,16 @@ SELECT empacadora_id, periodo_id, anio, mes, estado_periodo,
        fecha_cierre
   FROM agregado
  WHERE empacadora_id = contabilidad.current_empacadora();
+
+-- =====================================================================
+-- GRANTS — lo único que AgroMesh ve del schema contabilidad
+-- =====================================================================
+GRANT USAGE ON SCHEMA contabilidad TO authenticated, service_role;
+GRANT SELECT ON contabilidad.out_pnl_calibre,
+                contabilidad.out_ar_aging,
+                contabilidad.out_ap_status,
+                contabilidad.out_salud_negocio,
+                contabilidad.out_cfdi_status,
+                contabilidad.out_cierre_periodo
+  TO authenticated, service_role;
+-- Las tablas internas y las vistas in_* NO se exponen a los roles de la app.
