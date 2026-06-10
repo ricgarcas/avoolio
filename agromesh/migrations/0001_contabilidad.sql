@@ -766,3 +766,45 @@ BEGIN
   END LOOP;
 END $$;
 -- Sin FORCE: el owner del schema (jobs internos del módulo) opera cross-tenant.
+
+-- =====================================================================
+-- VISTAS DE ENTRADA in_* — lectura del modelo operacional (public)
+-- security_invoker: el RLS de las tablas base aplica al consultante.
+-- Nota: corte y resultado_seleccion no tienen empacadora_id propio;
+-- se resuelve vía join a acuerdo_compra_venta.
+-- =====================================================================
+CREATE VIEW contabilidad.in_acuerdos WITH (security_invoker = true) AS
+SELECT a.id, a.empacadora_id, a.productor_id, a.huerta_id,
+       a.precio_por_kg, a.volumen_acordado_ton, a.estado,
+       a.fecha_corte_programada, a.created_at, a.updated_at
+  FROM public.acuerdo_compra_venta a;
+
+CREATE VIEW contabilidad.in_cortes WITH (security_invoker = true) AS
+SELECT c.id, a.empacadora_id, c.acuerdo_id, c.huerta_id, c.cuadrilla_id,
+       c.acopio_id, c.fecha, c.volumen_cortado_ton, c.costo_cuadrilla_por_kg,
+       c.estado, c.created_at, c.updated_at
+  FROM public.corte c
+  JOIN public.acuerdo_compra_venta a ON a.id = c.acuerdo_id;
+
+CREATE VIEW contabilidad.in_resultados_seleccion WITH (security_invoker = true) AS
+SELECT rs.id, a.empacadora_id, rs.corte_id, rs.volumen_total_kg,
+       rs.pct_exportacion_real, rs.pct_nacional_real,
+       rs.desglose_calibre, rs.desglose_calidad, rs.fecha_proceso, rs.created_at
+  FROM public.resultado_seleccion rs
+  JOIN public.corte c ON c.id = rs.corte_id
+  JOIN public.acuerdo_compra_venta a ON a.id = c.acuerdo_id;
+
+CREATE VIEW contabilidad.in_ordenes_venta WITH (security_invoker = true) AS
+SELECT ov.id AS orden_venta_id, ov.empacadora_id, ov.importador_id,
+       ov.estado, ov.total_usd, ov.condiciones_pago, ov.incoterm,
+       ov.fecha_orden, ov.fecha_entrega_real,
+       lo.id AS linea_id, lo.calibre, lo.calidad, lo.cantidad_cajas,
+       lo.precio_caja_usd, lo.corte_origen_id
+  FROM public.orden_venta ov
+  LEFT JOIN public.linea_orden_venta lo ON lo.orden_id = ov.id;
+
+CREATE VIEW contabilidad.in_embarques WITH (security_invoker = true) AS
+SELECT e.id, e.empacadora_id, e.orden_venta_id, e.fecha_salida,
+       e.fecha_llegada_est, e.fecha_llegada_real, e.total_cajas,
+       e.estado, e.created_at, e.updated_at
+  FROM public.embarque e;
