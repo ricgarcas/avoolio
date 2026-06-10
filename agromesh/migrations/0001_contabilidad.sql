@@ -808,3 +808,269 @@ SELECT e.id, e.empacadora_id, e.orden_venta_id, e.fecha_salida,
        e.fecha_llegada_est, e.fecha_llegada_real, e.total_cajas,
        e.estado, e.created_at, e.updated_at
   FROM public.embarque e;
+
+-- =====================================================================
+-- VISTAS DE OUTPUT out_* — EL CONTRATO con AgroMesh
+-- (ACCOUNTING_REQUIREMENTS.md §"HARD DATA — what AgroMesh NEEDS BACK")
+-- Owner-security + filtro por current_empacadora(): tenant-scoped siempre.
+-- Cambiar columnas aquí = romper el contrato -> coordinar con Abisai.
+-- =====================================================================
+
+-- P&L por calibre · consume: Admin Inicio (4 widgets)
+CREATE VIEW contabilidad.out_pnl_calibre AS
+WITH vol AS (
+  -- kg por (corte, calibre) desde el JSONB de la seleccionadora,
+  -- con el share del calibre dentro del corte para prorratear costos.
+  SELECT a.empacadora_id, c.id AS corte_id, rs.fecha_proceso::date AS fecha,
+         kv.key AS calibre,
+         (kv.value #>> '{}')::numeric AS kg,
+         SUM((kv.value #>> '{}')::numeric) OVER (PARTITION BY c.id) AS kg_corte
+    FROM public.resultado_seleccion rs
+    JOIN public.corte c ON c.id = rs.corte_id
+    JOIN public.acuerdo_compra_venta a ON a.id = c.acuerdo_id
+   CROSS JOIN LATERAL jsonb_each(rs.desglose_calibre) kv
+),
+costos_corte AS (
+  SELECT co.corte_id,
+         SUM(co.monto_mxn) FILTER (WHERE co.tipo_costo = 'acarreo')            AS acarreo,
+         SUM(co.monto_mxn) FILTER (WHERE co.tipo_costo = 'corte_cuadrilla')    AS cuadrilla,
+         SUM(co.monto_mxn) FILTER (WHERE co.tipo_costo = 'empaque_materiales') AS empaque,
+         SUM(co.monto_mxn) FILTER (WHERE co.tipo_costo = 'costo_fijo_empaque') AS fijo
+    FROM contabilidad.costo_operativo co
+   WHERE co.corte_id IS NOT NULL
+   GROUP BY co.corte_id
+),
+fruta_corte AS (
+  SELECT c.id AS corte_id,
+         (a.precio_por_kg * c.volumen_cortado_ton * 1000)::numeric AS costo_fruta
+    FROM public.corte c
+    JOIN public.acuerdo_compra_venta a ON a.id = c.acuerdo_id
+),
+costos_calibre AS (
+  -- prorrateo por share de kg del calibre dentro del corte
+  SELECT v.empacadora_id, v.fecha, v.calibre,
+         SUM(v.kg) AS volumen_kg,
+         SUM(COALESCE(fc.costo_fruta, 0) * v.kg / NULLIF(v.kg_corte, 0)) AS costo_fruta_mxn,
+         SUM(COALESCE(cc.acarreo, 0)     * v.kg / NULLIF(v.kg_corte, 0)) AS costo_acarreo_mxn,
+         SUM(COALESCE(cc.cuadrilla, 0)   * v.kg / NULLIF(v.kg_corte, 0)) AS costo_cuadrilla_mxn,
+         SUM(COALESCE(cc.empaque, 0)     * v.kg / NULLIF(v.kg_corte, 0)) AS costo_empaque_mxn,
+         SUM(COALESCE(cc.fijo, 0)        * v.kg / NULLIF(v.kg_corte, 0)) AS costo_fijo_mxn
+    FROM vol v
+    LEFT JOIN costos_corte cc ON cc.corte_id = v.corte_id
+    LEFT JOIN fruta_corte fc  ON fc.corte_id = v.corte_id
+   GROUP BY v.empacadora_id, v.fecha, v.calibre
+),
+ingresos AS (
+  SELECT ov.empacadora_id,
+         COALESCE(ov.fecha_entrega_real, ov.fecha_orden::date) AS fecha,
+         lo.calibre,
+         SUM(lo.cantidad_cajas * lo.precio_caja_usd) AS ingresos_usd,
+         SUM(lo.cantidad_cajas)                      AS cajas_vendidas
+    FROM public.linea_orden_venta lo
+    JOIN public.orden_venta ov ON ov.id = lo.orden_id
+   WHERE lo.calibre IS NOT NULL
+   GROUP BY 1, 2, 3
+),
+fx_periodo AS (
+  -- TC promedio del periodo desde las CxC facturadas; fallback al TC ref del tenant.
+  SELECT cxc.empacadora_id, p.id AS periodo_id, AVG(cxc.tipo_cambio_factura) AS tc
+    FROM contabilidad.cuenta_por_cobrar cxc
+    JOIN contabilidad.periodo_contable p
+      ON p.empacadora_id = cxc.empacadora_id
+     AND cxc.fecha_emision BETWEEN p.fecha_inicio AND p.fecha_fin
+   GROUP BY 1, 2
+)
+SELECT p.empacadora_id,
+       p.id                                            AS periodo_id,
+       p.anio, p.mes,
+       COALESCE(i.calibre, cx.calibre)::text           AS calibre,
+       COALESCE(i.ingresos_usd, 0)::numeric            AS ingresos_usd,
+       (COALESCE(i.ingresos_usd, 0)
+         * COALESCE(fx.tc, e.tipo_cambio_ref, 0))::numeric AS ingresos_mxn,
+       COALESCE(cx.costo_fruta_mxn, 0)::numeric        AS costo_fruta_mxn,
+       COALESCE(cx.costo_acarreo_mxn, 0)::numeric      AS costo_acarreo_mxn,
+       COALESCE(cx.costo_cuadrilla_mxn, 0)::numeric    AS costo_cuadrilla_mxn,
+       COALESCE(cx.costo_empaque_mxn, 0)::numeric      AS costo_empaque_mxn,
+       COALESCE(cx.costo_fijo_mxn, 0)::numeric         AS costo_fijo_mxn,
+       (COALESCE(cx.costo_fruta_mxn,0) + COALESCE(cx.costo_acarreo_mxn,0)
+        + COALESCE(cx.costo_cuadrilla_mxn,0) + COALESCE(cx.costo_empaque_mxn,0)
+        + COALESCE(cx.costo_fijo_mxn,0))::numeric      AS costo_total_mxn,
+       (COALESCE(i.ingresos_usd,0) * COALESCE(fx.tc, e.tipo_cambio_ref, 0)
+        - (COALESCE(cx.costo_fruta_mxn,0) + COALESCE(cx.costo_acarreo_mxn,0)
+           + COALESCE(cx.costo_cuadrilla_mxn,0) + COALESCE(cx.costo_empaque_mxn,0)
+           + COALESCE(cx.costo_fijo_mxn,0)))::numeric  AS margen_bruto_mxn,
+       CASE WHEN COALESCE(i.ingresos_usd,0) * COALESCE(fx.tc, e.tipo_cambio_ref, 0) > 0
+            THEN ((COALESCE(i.ingresos_usd,0) * COALESCE(fx.tc, e.tipo_cambio_ref, 0)
+                   - (COALESCE(cx.costo_fruta_mxn,0) + COALESCE(cx.costo_acarreo_mxn,0)
+                      + COALESCE(cx.costo_cuadrilla_mxn,0) + COALESCE(cx.costo_empaque_mxn,0)
+                      + COALESCE(cx.costo_fijo_mxn,0)))
+                  / (COALESCE(i.ingresos_usd,0) * COALESCE(fx.tc, e.tipo_cambio_ref, 0)) * 100)
+       END::numeric                                    AS margen_bruto_pct,
+       CASE WHEN COALESCE(cx.volumen_kg, 0) > 0
+            THEN ((COALESCE(i.ingresos_usd,0) * COALESCE(fx.tc, e.tipo_cambio_ref, 0)
+                   - (COALESCE(cx.costo_fruta_mxn,0) + COALESCE(cx.costo_acarreo_mxn,0)
+                      + COALESCE(cx.costo_cuadrilla_mxn,0) + COALESCE(cx.costo_empaque_mxn,0)
+                      + COALESCE(cx.costo_fijo_mxn,0))) / cx.volumen_kg)
+       END::numeric                                    AS margen_por_kg_mxn,
+       COALESCE(cx.volumen_kg, 0)::numeric             AS volumen_kg,
+       COALESCE(i.cajas_vendidas, 0)::bigint           AS cajas_vendidas
+  FROM contabilidad.periodo_contable p
+  JOIN public.empacadora e ON e.id = p.empacadora_id
+  LEFT JOIN ingresos i
+    ON i.empacadora_id = p.empacadora_id
+   AND i.fecha BETWEEN p.fecha_inicio AND p.fecha_fin
+  LEFT JOIN costos_calibre cx
+    ON cx.empacadora_id = p.empacadora_id
+   AND cx.fecha BETWEEN p.fecha_inicio AND p.fecha_fin
+   AND cx.calibre = i.calibre
+  LEFT JOIN fx_periodo fx
+    ON fx.empacadora_id = p.empacadora_id AND fx.periodo_id = p.id
+ WHERE p.empacadora_id = contabilidad.current_empacadora()
+   AND COALESCE(i.calibre, cx.calibre) IS NOT NULL;
+
+-- AR aging · consume: Ventas Embarques + Admin
+CREATE VIEW contabilidad.out_ar_aging AS
+SELECT cxc.empacadora_id,
+       cxc.id              AS cxc_id,
+       cxc.orden_venta_id,
+       cxc.importador_id,
+       cxc.monto_usd,
+       cxc.saldo_pendiente_usd,
+       cxc.fecha_emision,
+       cxc.fecha_vencimiento,
+       cxc.fecha_pago_real,
+       (current_date - cxc.fecha_emision)::int AS dias_transcurridos,
+       CASE
+         WHEN cxc.estado IN ('pagada', 'cancelada')          THEN cxc.estado::text
+         WHEN current_date >  cxc.fecha_vencimiento          THEN 'vencida'
+         WHEN current_date >= cxc.fecha_vencimiento - 4      THEN 'por_vencer_21_25'
+         ELSE 'corriente'
+       END::text AS bucket,
+       cxc.estado::text AS estado
+  FROM contabilidad.cuenta_por_cobrar cxc
+ WHERE cxc.empacadora_id = contabilidad.current_empacadora();
+
+-- AP status · consume: Admin (cash planning)
+CREATE VIEW contabilidad.out_ap_status AS
+SELECT cxp.empacadora_id,
+       cxp.id AS cxp_id,
+       cxp.acuerdo_id,
+       cxp.corte_id,
+       CASE WHEN cxp.productor_id IS NOT NULL THEN 'productor' ELSE 'cuadrilla' END::text AS acreedor_tipo,
+       cxp.productor_id,
+       cxp.cuadrilla_id,
+       cxp.monto_mxn,
+       cxp.saldo_pendiente_mxn,
+       cxp.fecha_emision,
+       cxp.fecha_vencimiento,
+       cxp.estado::text AS estado
+  FROM contabilidad.cuenta_por_pagar cxp
+ WHERE cxp.empacadora_id = contabilidad.current_empacadora();
+
+-- Salud del negocio · consume: Owner hero metric
+CREATE VIEW contabilidad.out_salud_negocio AS
+WITH resultado AS (
+  SELECT p.empacadora_id, p.id AS periodo_id, p.anio, p.mes,
+         SUM(CASE WHEN cu.tipo = 'ingreso' THEN la.haber_mxn - la.debe_mxn ELSE 0 END) AS ingresos,
+         SUM(CASE WHEN cu.tipo = 'egreso'  THEN la.debe_mxn - la.haber_mxn ELSE 0 END) AS egresos
+    FROM contabilidad.periodo_contable p
+    LEFT JOIN contabilidad.asiento_contable a
+      ON a.periodo_id = p.id AND a.estado = 'confirmado'
+    LEFT JOIN contabilidad.linea_asiento la ON la.asiento_id = a.id
+    LEFT JOIN contabilidad.cuenta_contable cu ON cu.id = la.cuenta_id
+   GROUP BY 1, 2, 3, 4
+),
+caja AS (
+  -- saldo acumulado de cuentas de bancos (códigos 11xx) hasta el fin de cada periodo
+  SELECT p.id AS periodo_id,
+         SUM(la.debe_mxn - la.haber_mxn) AS saldo
+    FROM contabilidad.periodo_contable p
+    JOIN contabilidad.asiento_contable a
+      ON a.empacadora_id = p.empacadora_id AND a.estado = 'confirmado'
+     AND a.fecha <= p.fecha_fin
+    JOIN contabilidad.linea_asiento la ON la.asiento_id = a.id
+    JOIN contabilidad.cuenta_contable cu ON cu.id = la.cuenta_id AND cu.codigo LIKE '11%'
+   GROUP BY 1
+),
+exposicion AS (
+  SELECT p.id AS periodo_id,
+         SUM(cxc.saldo_pendiente_usd) FILTER (WHERE cxc.estado IN ('pendiente','parcial')) AS cxc_abierta,
+         SUM(cxc.saldo_pendiente_usd) FILTER (
+           WHERE cxc.estado IN ('pendiente','parcial') AND cxc.fecha_vencimiento < current_date) AS cxc_vencida
+    FROM contabilidad.periodo_contable p
+    JOIN contabilidad.cuenta_por_cobrar cxc
+      ON cxc.empacadora_id = p.empacadora_id
+     AND cxc.fecha_emision <= p.fecha_fin
+   GROUP BY 1
+),
+deuda AS (
+  SELECT p.id AS periodo_id,
+         SUM(cxp.saldo_pendiente_mxn) FILTER (WHERE cxp.estado IN ('pendiente','parcial')) AS cxp_abierta
+    FROM contabilidad.periodo_contable p
+    JOIN contabilidad.cuenta_por_pagar cxp
+      ON cxp.empacadora_id = p.empacadora_id
+     AND cxp.fecha_emision <= p.fecha_fin
+   GROUP BY 1
+)
+SELECT r.empacadora_id, r.periodo_id, r.anio, r.mes,
+       (r.ingresos - r.egresos)::numeric AS margen_neto_mxn,
+       CASE WHEN r.ingresos > 0
+            THEN ((r.ingresos - r.egresos) / r.ingresos * 100) END::numeric AS margen_neto_pct,
+       (CASE WHEN r.ingresos > 0 THEN (r.ingresos - r.egresos) / r.ingresos * 100 END
+        - LAG(CASE WHEN r.ingresos > 0 THEN (r.ingresos - r.egresos) / r.ingresos * 100 END)
+          OVER (PARTITION BY r.empacadora_id ORDER BY r.anio, r.mes))::numeric AS tendencia_margen_pct,
+       COALESCE(c.saldo, 0)::numeric        AS posicion_caja_mxn,
+       COALESCE(x.cxc_abierta, 0)::numeric  AS cxc_abierta_usd,
+       COALESCE(x.cxc_vencida, 0)::numeric  AS cxc_vencida_usd,
+       COALESCE(d.cxp_abierta, 0)::numeric  AS cxp_abierta_mxn
+  FROM resultado r
+  LEFT JOIN caja c       ON c.periodo_id = r.periodo_id
+  LEFT JOIN exposicion x ON x.periodo_id = r.periodo_id
+  LEFT JOIN deuda d      ON d.periodo_id = r.periodo_id
+ WHERE r.empacadora_id = contabilidad.current_empacadora();
+
+-- CFDI status por orden · consume: Ventas Pedidos
+CREATE VIEW contabilidad.out_cfdi_status AS
+SELECT ov.empacadora_id,
+       ov.id AS orden_venta_id,
+       f.id  AS factura_cfdi_id,
+       f.uuid_fiscal,
+       f.serie,
+       f.folio,
+       COALESCE(f.estatus::text, 'sin_facturar') AS estatus,
+       f.total_mxn,
+       f.total_usd,
+       f.fecha_timbrado,
+       f.xml_url,
+       f.pdf_url
+  FROM public.orden_venta ov
+  LEFT JOIN contabilidad.factura_cfdi f
+    ON f.orden_venta_id = ov.id AND f.tipo_comprobante = 'ingreso'
+ WHERE ov.empacadora_id = contabilidad.current_empacadora();
+
+-- Cierre de periodo · consume: Admin + Owner ("monthly truth")
+CREATE VIEW contabilidad.out_cierre_periodo AS
+WITH agregado AS (
+  SELECT p.empacadora_id, p.id AS periodo_id, p.anio, p.mes,
+         p.estado::text AS estado_periodo, p.fecha_cierre,
+         SUM(CASE WHEN cu.tipo = 'ingreso' THEN la.haber_mxn - la.debe_mxn ELSE 0 END) AS ingresos_mxn,
+         SUM(CASE WHEN cu.tipo = 'ingreso' THEN COALESCE(la.haber_usd,0) - COALESCE(la.debe_usd,0) ELSE 0 END) AS ingresos_usd,
+         SUM(CASE WHEN cu.tipo = 'egreso' AND a.tipo IN ('compra_fruta','costo_operativo')
+                  THEN la.debe_mxn - la.haber_mxn ELSE 0 END) AS cogs_mxn,
+         SUM(CASE WHEN cu.tipo = 'egreso' AND a.tipo NOT IN ('compra_fruta','costo_operativo','ajuste_fx')
+                  THEN la.debe_mxn - la.haber_mxn ELSE 0 END) AS opex_mxn,
+         SUM(CASE WHEN a.tipo = 'ajuste_fx' THEN la.debe_mxn - la.haber_mxn ELSE 0 END) AS ajuste_fx_mxn
+    FROM contabilidad.periodo_contable p
+    LEFT JOIN contabilidad.asiento_contable a
+      ON a.periodo_id = p.id AND a.estado = 'confirmado'
+    LEFT JOIN contabilidad.linea_asiento la ON la.asiento_id = a.id
+    LEFT JOIN contabilidad.cuenta_contable cu ON cu.id = la.cuenta_id
+   GROUP BY 1, 2, 3, 4, 5, 6
+)
+SELECT empacadora_id, periodo_id, anio, mes, estado_periodo,
+       ingresos_mxn::numeric, ingresos_usd::numeric, cogs_mxn::numeric, opex_mxn::numeric,
+       ajuste_fx_mxn::numeric,
+       (ingresos_mxn - cogs_mxn - opex_mxn - ajuste_fx_mxn)::numeric AS neto_mxn,
+       fecha_cierre
+  FROM agregado
+ WHERE empacadora_id = contabilidad.current_empacadora();
