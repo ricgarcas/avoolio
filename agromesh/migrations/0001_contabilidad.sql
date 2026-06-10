@@ -1,0 +1,1 @@
+-- AGR-13 · schema contabilidad (se construye en tasks 2-11)
