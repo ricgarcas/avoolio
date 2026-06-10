@@ -672,3 +672,22 @@ END $$;
 CREATE TRIGGER trg_asiento_periodo_abierto
   BEFORE INSERT OR UPDATE OF periodo_id ON contabilidad.asiento_contable
   FOR EACH ROW EXECUTE FUNCTION contabilidad.check_periodo_abierto();
+
+-- =====================================================================
+-- TRIGGERS — solo cuentas hoja activas reciben líneas
+-- =====================================================================
+CREATE FUNCTION contabilidad.check_cuenta_posteable() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_hoja boolean; v_activa boolean; v_codigo text;
+BEGIN
+  SELECT es_hoja, activa, codigo INTO v_hoja, v_activa, v_codigo
+    FROM contabilidad.cuenta_contable WHERE id = NEW.cuenta_id;
+  IF NOT v_hoja OR NOT v_activa THEN
+    RAISE EXCEPTION 'cuenta % no es posteable (es_hoja=%, activa=%)', v_codigo, v_hoja, v_activa;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_linea_cuenta_posteable
+  BEFORE INSERT OR UPDATE OF cuenta_id ON contabilidad.linea_asiento
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.check_cuenta_posteable();
