@@ -1,0 +1,7 @@
+columna,tipo,requerido,unico,llave,default,descripcion
+id,uuid,si,si,PK,gen_random_uuid(),Identificador interno del acarreador
+nombre,texto,si,si,,,Nombre del acarreador o proveedor de acarreo
+tipo_unidad,texto,no,no,,,Tipo de unidad (Torton, Rabon, etc.)
+tarifa_viaje,decimal,no,no,,,Tarifa por viaje ($/viaje)
+created_at,fecha y hora,si,no,,now(),Fecha de alta del registro
+updated_at,fecha y hora,si,no,,now(),Fecha de ultima modificacion

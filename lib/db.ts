@@ -9,26 +9,35 @@ import { Pool } from "pg";
    Cuando el proyecto exponga estos schemas en la Data API (rol Owner), se podrá
    migrar a supabase-js y quitar esta capa. */
 
+const databaseUrl = process.env.DATABASE_URL;
 const ref = process.env.SUPABASE_REF ?? "sfkhmlaaohidmotdnmlh";
 const password = process.env.SUPABASE_DB_PASSWORD;
 
 let pool: Pool | null = null;
 
-/** Pool perezoso. Devuelve null si no hay password configurado. */
+/** Pool perezoso. Prefiere DATABASE_URL (Postgres local/Railway/etc.);
+ *  fallback al Supabase legacy si solo hay password configurado. */
 export function getPool(): Pool | null {
-  if (!password) return null;
-  if (!pool) {
+  if (pool) return pool;
+  if (databaseUrl) {
     pool = new Pool({
-      host: `db.${ref}.supabase.co`,
-      port: 5432,
-      user: "postgres",
-      password,
-      database: "postgres",
-      ssl: { rejectUnauthorized: false },
+      connectionString: databaseUrl,
       max: 3,
       connectionTimeoutMillis: 8000,
     });
+    return pool;
   }
+  if (!password) return null;
+  pool = new Pool({
+    host: `db.${ref}.supabase.co`,
+    port: 5432,
+    user: "postgres",
+    password,
+    database: "postgres",
+    ssl: { rejectUnauthorized: false },
+    max: 3,
+    connectionTimeoutMillis: 8000,
+  });
   return pool;
 }
 

@@ -1,0 +1,6 @@
+tabla,descripcion,num_columnas,relaciones
+productor,Catalogo de productores (duenos de huertas y payees de CxP),10,referenciada por huerta.productor_id
+huerta,Catalogo de huertas; al programar un corte sus datos se autollenan desde aqui,11,referencia a productor.id
+acopiador,Catalogo de acopiadores con estatus operativo,8,
+cuadrilla,Catalogo de cuadrillas / empresas de corte (propias o externas),8,
+acarreador,Catalogo de acarreadores / proveedores de acarreo,7,

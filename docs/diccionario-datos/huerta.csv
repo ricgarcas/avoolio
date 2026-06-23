@@ -1,0 +1,11 @@
+columna,tipo,requerido,unico,llave,default,descripcion
+id,uuid,si,si,PK,gen_random_uuid(),Identificador interno de la huerta
+hue,texto,si,si,,,Clave de huerta (ej. HUE00000002340)
+nombre,texto,si,no,,,Nombre de la huerta
+productor_id,uuid,no,no,FK -> productor.id,,Productor dueno de la huerta (se vacia si se borra el productor)
+municipio,texto,no,no,,,Municipio donde se ubica la huerta
+altura,entero,no,no,,,Altura en metros sobre el nivel del mar (msnm); menor a 2100 genera alerta
+punto_reunion,texto,no,no,,,Punto de reunion para la cuadrilla
+bascula,texto,no,no,,,Bascula asignada para el pesaje
+created_at,fecha y hora,si,no,,now(),Fecha de alta del registro
+updated_at,fecha y hora,si,no,,now(),Fecha de ultima modificacion

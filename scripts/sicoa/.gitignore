@@ -1,0 +1,6 @@
+_capture/
+*.har
+*.png
+*.html
+*.json
+!schema.json

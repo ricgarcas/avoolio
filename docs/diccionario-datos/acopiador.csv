@@ -1,0 +1,8 @@
+columna,tipo,requerido,unico,llave,default,valores_permitidos,descripcion
+id,uuid,si,si,PK,gen_random_uuid(),,Identificador interno del acopiador
+nombre,texto,si,si,,,,Nombre del acopiador
+whatsapp,texto,no,no,,,,Numero de WhatsApp de contacto
+zona,texto,no,no,,,,Zona geografica asignada
+estatus,texto,si,no,,pendiente,autorizado / pendiente / suspendido / temporal,Estatus operativo del acopiador
+created_at,fecha y hora,si,no,,now(),,Fecha de alta del registro
+updated_at,fecha y hora,si,no,,now(),,Fecha de ultima modificacion

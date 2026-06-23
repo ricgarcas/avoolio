@@ -49,8 +49,8 @@ es la superficie firma. Ver el PDF para el detalle bloqueado.
 ## Estado
 
 - ✅ Pase 1: scaffold + sistema de diseño (tokens + componentes + showcase).
-- ⏳ Datos de **acopio**: viven en el schema `ops` de Supabase, **no expuesto**
-  en la API y sin acceso de Owner. Pendiente desbloquear (ver `SUPABASE.md`)
-  para cablear las pantallas de producto.
+- ⏳ Datos de **acopio**: viven en el schema `ops` de Supabase (legacy), **no expuesto**
+  en la API y sin acceso de Owner. Migración a Postgres local (Herd) en curso —
+  ver `DATABASE.md`.
 
 > Stack y tokens confirmados desde el spec v1.0 (03 jun 2026).

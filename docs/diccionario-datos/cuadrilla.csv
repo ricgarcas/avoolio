@@ -1,0 +1,8 @@
+columna,tipo,requerido,unico,llave,default,valores_permitidos,descripcion
+id,uuid,si,si,PK,gen_random_uuid(),,Identificador interno de la cuadrilla
+nombre,texto,si,si,,,,Nombre de la cuadrilla o empresa de corte
+tipo,texto,si,no,,externa,propia / externa,Si la cuadrilla es propia o externa
+tarifa_kg,decimal,no,no,,,,Tarifa por kilogramo cortado ($/kg)
+tarifa_dia,decimal,no,no,,,,Tarifa por dia de trabajo ($/dia)
+created_at,fecha y hora,si,no,,now(),,Fecha de alta del registro
+updated_at,fecha y hora,si,no,,now(),,Fecha de ultima modificacion

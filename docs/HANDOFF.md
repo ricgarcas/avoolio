@@ -30,7 +30,7 @@ Plataforma de operaciones para la cadena del aguacate. Producto = **AgroMesh**, 
 | `cxp` | 292 | `import-cxp.mjs` (142 productor · 80 corte · 70 acarreo) |
 | `pendiente_hitl` | 6 | seed (migr 0001/0002) — *aún mock* |
 
-Migrations: `supabase/migrations/0001..0007`. **Falta `0004` (era seed demo inventado, eliminado a propósito).**
+Migrations: `db/migrations/0001..0007`. **Falta `0004` (era seed demo inventado, eliminado a propósito).**
 
 ---
 
@@ -70,7 +70,7 @@ node scripts/import-cxp.mjs       # cuentas por pagar
 node scripts/scan-monday.mjs      # explorador de relaciones/boards
 
 # Aplicar una migration (psql directo, lee .env.local):
-#   PGPASSWORD=$SUPABASE_DB_PASSWORD psql "sslmode=require host=db.<ref>.supabase.co ..." -f supabase/migrations/000X.sql
+#   PGPASSWORD=$SUPABASE_DB_PASSWORD psql "sslmode=require host=db.<ref>.supabase.co ..." -f db/migrations/000X.sql
 ```
 
 **Monday API:** token en `.env.local` (`MONDAY_API_TOKEN`). Clave: las columnas fórmula salen vacías en `text` → usar `column_values { ... on FormulaValue { display_value } }`. Upsert por `it.id` (no `it.name`). Dashboards NO los expone la API.
@@ -96,7 +96,7 @@ lib/{catalogos,cortes,cxp}/{schema,queries,actions}.ts   zod + queries(server-on
 lib/format.ts                          mxn/usd/delta/fecha/hace
 lib/supabase/{client,server,middleware}.ts
 scripts/import-*.mjs                   ETL Monday→public
-supabase/migrations/000X_*.sql
+db/migrations/000X_*.sql
 _analisis/                             maqueta/spec original (app.html, modelo.html, assets/avoolio.js)
 ```
 

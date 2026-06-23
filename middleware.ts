@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 const COOKIE_NAME = "avoolio-auth";
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/sicoa-review"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

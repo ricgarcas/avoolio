@@ -1,0 +1,11 @@
+columna,tipo,requerido,unico,llave,default,descripcion
+id,uuid,si,si,PK,gen_random_uuid(),Identificador interno del productor
+nombre,texto,si,no,,,Nombre o razon social del productor
+rfc,texto,no,si,,,RFC del productor (clave fiscal)
+municipio,texto,no,no,,,Municipio del productor
+tel,texto,no,no,,,Telefono de contacto
+correo,texto,no,no,,,Correo electronico de contacto
+beneficiario,texto,no,no,,,Beneficiario / payee para cuentas por pagar (CxP)
+dias_credito,entero,no,no,,,Dias de credito acordados con el productor
+created_at,fecha y hora,si,no,,now(),Fecha de alta del registro
+updated_at,fecha y hora,si,no,,now(),Fecha de ultima modificacion
